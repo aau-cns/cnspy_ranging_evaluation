@@ -1,0 +1,10 @@
+numpy
+pandas
+spatialmath-python
+scipy
+matplotlib
+joblib
+configparser
+cnspy_numpy_utils
+cnspy_timestamp_association
+cnspy_csv2dataframe
