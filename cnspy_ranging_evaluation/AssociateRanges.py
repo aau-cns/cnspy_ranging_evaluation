@@ -29,6 +29,7 @@ import math
 
 from cnspy_timestamp_association.TimestampAssociation import TimestampAssociation
 
+
 class PlotLineStyle():
     linecolor = 'r'  # b,g,r,c,m,y,k,w
     linewidth = 1
@@ -48,7 +49,41 @@ class PlotLineStyle():
         self.markerfacecolor = markerfacecolor
         self.label = label
 
-
+class AssociateRangesCfg:
+    UWB_ID1 = None
+    UWB_ID2 = None
+    relative_timestamps = False
+    max_difference = 0.02
+    subsample = 0
+    verbose = False
+    remove_outliers = False,
+    max_range = 30
+    range_error_val = 0
+    label_timestamp = 't'
+    label_ID1 = 'UWB_ID1'
+    label_ID2 = 'UWB_ID2'
+    label_range = 'range_raw'
+    def __init__(self, UWB_ID1=None, UWB_ID2=None, relative_timestamps=False,
+                 max_difference=0.02, subsample=0, verbose=False, remove_outliers=False,
+                 max_range=30, range_error_val=0, label_timestamp='t',
+                 label_ID1='UWB_ID1',
+                 label_ID2='UWB_ID2', label_range = 'range_raw'):
+        self.label_timestamp = label_timestamp
+        self.label_ID1 = label_ID1
+        self.label_ID2 = label_ID2
+        self.label_range = label_range
+        self.UWB_ID1 = UWB_ID1
+        self.UWB_ID2 = UWB_ID2
+        self.relative_timestamps = relative_timestamps
+        self.max_difference = max_difference
+        self.subsample = subsample
+        self.verbose = verbose
+        self.remove_outliers = remove_outliers
+        self.max_range = max_range
+        self.range_error_val = range_error_val
+        
+        
+    
 class AssociateRanges:
     csv_df_gt = None
     csv_df_est = None
@@ -58,51 +93,56 @@ class AssociateRanges:
 
     matches_est_gt = None  # list of tuples containing [(idx_est, idx_gt), ...]
 
-    def __init__(self, fn_gt, fn_est, UWB_ID1=None, UWB_ID2=None, relative_timestamps=False,
-                 max_difference=0.02, subsample=0, verbose=False,
-                 max_range=30, range_error_val=0):
+    cfg = AssociateRangesCfg()
+
+    def __init__(self, fn_gt, fn_est, cfg):
+        self.cfg = cfg
+
+
         assert (os.path.exists(fn_gt)), str("Path to fn_gt does not exist!:" + str(fn_gt))
         assert (os.path.exists((fn_est))), str("Path to fn_est does not exist!:" + str(fn_est))
 
         self.csv_df_gt = pandas.read_csv(fn_gt, sep='\s+|\,', comment='#', engine='python')
         self.csv_df_est = pandas.read_csv(fn_est, sep='\s+|\,', comment='#', engine='python')
 
-        if UWB_ID1 is not None:
-            self.csv_df_gt= (self.csv_df_gt.loc[self.csv_df_gt['UWB_ID1'] == UWB_ID1])
-            self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est['UWB_ID1'] == UWB_ID1])
+        if cfg.UWB_ID1 is not None:
+            self.csv_df_gt = (self.csv_df_gt.loc[self.csv_df_gt[cfg.label_ID1] == cfg.UWB_ID1])
+            self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est[cfg.label_ID1] == cfg.UWB_ID1])
 
-        if UWB_ID2  is not None:
-            self.csv_df_gt = (self.csv_df_gt.loc[self.csv_df_gt['UWB_ID2'] == UWB_ID2])
-            self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est['UWB_ID2'] == UWB_ID2])
+        if cfg.UWB_ID2 is not None:
+            self.csv_df_gt = (self.csv_df_gt.loc[self.csv_df_gt[cfg.label_ID2] == cfg.UWB_ID2])
+            self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est[cfg.label_ID2] == cfg.UWB_ID2])
 
-        #self.csv_df_est["range_raw"] = self.csv_df_est["range_raw"].where(abs(self.csv_df_est["range_raw"]) > max_range, other=range_error_val)
+        if cfg.remove_outliers:
+            self.csv_df_est[cfg.label_range] = self.csv_df_est[cfg.label_range].where(
+                abs(self.csv_df_est[cfg.label_range]) > cfg.max_range, other=cfg.range_error_val)
+        else:
+            indices = (abs(self.csv_df_est[cfg.label_range]) > cfg.max_range)
+            self.csv_df_est.loc[indices, cfg.label_range] = cfg.range_error_val
 
-        indices = (abs(self.csv_df_est["range_raw"]) > max_range)
-        self.csv_df_est.loc[indices, "range_raw"] = 0
-
-        if subsample > 1:
-            subsample = round(subsample, 0)
-            self.csv_df_gt= AssociateRanges.subsample_DataFrame(df=self.csv_df_gt, step=subsample, verbose=verbose)
-            self.csv_df_est = AssociateRanges.subsample_DataFrame(df=self.csv_df_est, step=subsample, verbose=verbose)
+        if cfg.subsample > 1:
+            subsample = round(cfg.subsample, 0)
+            self.csv_df_gt = AssociateRanges.subsample_DataFrame(df=self.csv_df_gt, step=subsample, verbose=cfg.verbose)
+            self.csv_df_est = AssociateRanges.subsample_DataFrame(df=self.csv_df_est, step=subsample, verbose=cfg.verbose)
 
         if version_info[0] < 3:
-            t_vec_gt = self.csv_df_gt.as_matrix(['t'])
-            t_vec_est = self.csv_df_est.as_matrix(['t'])
+            t_vec_gt = self.csv_df_gt.as_matrix([cfg.label_timestamp])
+            t_vec_est = self.csv_df_est.as_matrix([cfg.label_timestamp])
             t_zero = min(t_vec_gt[0], t_vec_est[0])
-            if relative_timestamps:
-                self.csv_df_gt[['t']] = self.csv_df_gt[['t']] - t_zero
-                self.csv_df_est[['t']] = self.csv_df_est[['t']] - t_zero
+            if cfg.relative_timestamps:
+                self.csv_df_gt[[cfg.label_timestamp]] = self.csv_df_gt[[cfg.label_timestamp]] - t_zero
+                self.csv_df_est[[cfg.label_timestamp]] = self.csv_df_est[[cfg.label_timestamp]] - t_zero
         else:
             # FIX(scm): for newer versions as_matrix is deprecated, using to_numpy instead
             # from https://stackoverflow.com/questions/60164560/attributeerror-series-object-has-no-attribute-as-matrix-why-is-it-error
-            t_vec_gt = self.csv_df_gt[['t']].to_numpy()
-            t_vec_est = self.csv_df_est[['t']].to_numpy()
+            t_vec_gt = self.csv_df_gt[[cfg.label_timestamp]].to_numpy()
+            t_vec_est = self.csv_df_est[[cfg.label_timestamp]].to_numpy()
             t_zero = min(t_vec_gt[0], t_vec_est[0])
-            if relative_timestamps:
-                self.csv_df_gt[['t']] = self.csv_df_gt[['t']] - t_zero
-                self.csv_df_est[['t']] = self.csv_df_est[['t']] - t_zero
+            if cfg.relative_timestamps:
+                self.csv_df_gt[[cfg.label_timestamp]] = self.csv_df_gt[[cfg.label_timestamp]] - t_zero
+                self.csv_df_est[[cfg.label_timestamp]] = self.csv_df_est[[cfg.label_timestamp]] - t_zero
 
-        if relative_timestamps:
+        if cfg.relative_timestamps:
             # only relative time stamps:
             t_vec_gt = t_vec_gt - t_zero
             t_vec_est = t_vec_est - t_zero
@@ -110,7 +150,7 @@ class AssociateRanges:
         idx_est, idx_gt, t_est_matched, t_gt_matched = TimestampAssociation.associate_timestamps(
             t_vec_est,
             t_vec_gt,
-            max_difference=max_difference,
+            max_difference=cfg.max_difference,
             round_decimals=6,
             unique_timestamps=True)
 
@@ -118,18 +158,17 @@ class AssociateRanges:
         self.data_frame_gt_matched = self.csv_df_gt.iloc[idx_gt, :]
         self.matches_est_gt = zip(idx_est, idx_gt)
 
-        if verbose:
+        if cfg.verbose:
             print("AssociateRanges(): {} timestamps associated.".format(len(idx_est)))
-
 
         # using zip() and * operator to
         # perform Unzipping
         # res = list(zip(*test_list))
 
-    def plot_timestamps(self, cfg_dpi=200, cfg_title="timestamps", fig=None, ax=None,
+    def plot_timestamps(self, cfg_dpi=200, cfg_title="timestamps", calc_error=False, fig=None, ax=None,
                         colors=['r', 'g'], labels=['gt', 'est'],
                         ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
-                        save_fn="",  result_dir="."):
+                        save_fn="", result_dir="."):
         if fig is None:
             fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
         if ax is None:
@@ -138,28 +177,37 @@ class AssociateRanges:
             ax.set_title(cfg_title)
 
         if version_info[0] < 3:
-            t_vec_gt = self.data_frame_gt_matched.as_matrix(['t'])
-            t_vec_est = self.data_frame_est_matched.as_matrix(['t'])
+            t_vec_gt = self.data_frame_gt_matched.as_matrix([self.cfg.label_timestamp])
+            t_vec_est = self.data_frame_est_matched.as_matrix([self.cfg.label_timestamp])
         else:
-            t_vec_gt = self.data_frame_gt_matched[['t']].to_numpy()
-            t_vec_est = self.data_frame_est_matched[['t']].to_numpy()
+            t_vec_gt = self.data_frame_gt_matched[[self.cfg.label_timestamp]].to_numpy()
+            t_vec_est = self.data_frame_est_matched[[self.cfg.label_timestamp]].to_numpy()
 
-        x_arr = range(len(t_vec_gt))
-        AssociateRanges.ax_plot_n_dim(ax, x_arr, t_vec_gt, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
-        x_arr = range(len(t_vec_est))
-        AssociateRanges.ax_plot_n_dim(ax, x_arr, t_vec_est, colors=[colors[1]], labels=[labels[1]], ls=ls_vec[1])
+        if not calc_error:
+            x_arr = range(len(t_vec_gt))
+            AssociateRanges.ax_plot_n_dim(ax, x_arr, t_vec_gt, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
+            x_arr = range(len(t_vec_est))
+            AssociateRanges.ax_plot_n_dim(ax, x_arr, t_vec_est, colors=[colors[1]], labels=[labels[1]], ls=ls_vec[1])
 
-        ax.grid(b=True)
-        ax.set_xlabel('idx')
-        ax.set_ylabel('time [s]')
+            ax.grid(b=True)
+            ax.set_xlabel('idx')
+            ax.set_ylabel('time [s]')
+        else:
+            x_arr = range(len(t_vec_gt))
+            t_vec_err = t_vec_gt - t_vec_est
+            AssociateRanges.ax_plot_n_dim(ax, x_arr, t_vec_err, colors=['r'], labels=['err'], ls=ls_vec[0])
+            ax.grid(b=True)
+            ax.set_xlabel('idx')
+            ax.set_ylabel('diff time [s]')
+
         AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
 
         return fig, ax
 
-    def plot_ranges(self, cfg_dpi=200, cfg_title="ranges", fig=None, ax=None,
-                        colors=['r', 'g'], labels=['gt', 'est'],
-                        ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
-                        save_fn="",  result_dir="."):
+    def plot_ranges(self, cfg_dpi=200, cfg_title="ranges", sorted=False, fig=None, ax=None,
+                    colors=['r', 'g'], labels=['gt', 'est'],
+                    ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
+                    save_fn="", result_dir="."):
         if fig is None:
             fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
         if ax is None:
@@ -168,31 +216,98 @@ class AssociateRanges:
             ax.set_title(cfg_title)
 
         if version_info[0] < 3:
-            t_vec_gt = self.data_frame_gt_matched.as_matrix(['t'])
-            t_vec_est = self.data_frame_est_matched.as_matrix(['t'])
+            t_vec_gt = self.data_frame_gt_matched.as_matrix([self.cfg.label_timestamp])
+            t_vec_est = self.data_frame_est_matched.as_matrix([self.cfg.label_timestamp])
         else:
-            t_vec_gt = self.data_frame_gt_matched[['t']].to_numpy()
-            t_vec_est = self.data_frame_est_matched[['t']].to_numpy()
+            t_vec_gt = self.data_frame_gt_matched[[self.cfg.label_timestamp]].to_numpy()
+            t_vec_est = self.data_frame_est_matched[[self.cfg.label_timestamp]].to_numpy()
 
         if version_info[0] < 3:
-            r_vec_gt = self.data_frame_gt_matched.as_matrix(['range_raw'])
-            r_vec_est = self.data_frame_est_matched.as_matrix(['range_raw'])
+            r_vec_gt = self.data_frame_gt_matched.as_matrix([self.cfg.label_range])
+            r_vec_est = self.data_frame_est_matched.as_matrix([self.cfg.label_range])
         else:
-            r_vec_gt = self.data_frame_gt_matched[['range_raw']].to_numpy()
-            r_vec_est = self.data_frame_est_matched[['range_raw']].to_numpy()
+            r_vec_gt = self.data_frame_gt_matched[[self.cfg.label_range]].to_numpy()
+            r_vec_est = self.data_frame_est_matched[[self.cfg.label_range]].to_numpy()
 
-        #x_arr = range(len(t_vec_gt))
-        AssociateRanges.ax_plot_n_dim(ax, t_vec_gt, r_vec_gt, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
-        #x_arr = range(len(t_vec_est))
-        AssociateRanges.ax_plot_n_dim(ax, t_vec_est, r_vec_est, colors=[colors[1]], labels=[labels[1]], ls=ls_vec[1])
+        if not sorted:
+            # x_arr = range(len(t_vec_gt))
+            AssociateRanges.ax_plot_n_dim(ax, t_vec_gt, r_vec_gt, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
+            # x_arr = range(len(t_vec_est))
+            AssociateRanges.ax_plot_n_dim(ax, t_vec_est, r_vec_est, colors=[colors[1]], labels=[labels[1]], ls=ls_vec[1])
 
-        ax.grid(b=True)
-        ax.set_ylabel('range')
-        ax.set_xlabel('time [s]')
-        AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
+            ax.grid(b=True)
+            ax.set_ylabel('range')
+            ax.set_xlabel('time [s]')
+            AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
+
+        else:
+            gt_indices_sorted = np.argsort(r_vec_gt, axis=0)
+            x_arr = range(len(r_vec_gt))
+            AssociateRanges.ax_plot_n_dim(ax, x_arr, np.take_along_axis(r_vec_gt, gt_indices_sorted, axis=0), colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
+            AssociateRanges.ax_plot_n_dim(ax, x_arr, np.take_along_axis(r_vec_est, gt_indices_sorted, axis=0), colors=[colors[1]], labels=[labels[1]], ls=ls_vec[1])
+            ax.grid(b=True)
+            ax.set_ylabel('range')
+            ax.set_xlabel('range sorted index')
+            AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
 
         return fig, ax
 
+    def plot_range_error(self, cfg_dpi=200, cfg_title="ranges", sorted=False, remove_outlier=True, fig=None, ax=None,
+                    colors=['r', 'g'], labels=['gt', 'est'],
+                    ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
+                    save_fn="", result_dir="."):
+        if fig is None:
+            fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
+        if ax is None:
+            ax = fig.add_subplot(111)
+        if cfg_title:
+            ax.set_title(cfg_title)
+
+        if version_info[0] < 3:
+            t_vec_gt = self.data_frame_gt_matched.as_matrix([self.cfg.label_timestamp])
+            t_vec_est = self.data_frame_est_matched.as_matrix([self.cfg.label_timestamp])
+        else:
+            t_vec_gt = self.data_frame_gt_matched[[self.cfg.label_timestamp]].to_numpy()
+            t_vec_est = self.data_frame_est_matched[[self.cfg.label_timestamp]].to_numpy()
+
+        if version_info[0] < 3:
+            r_vec_gt = self.data_frame_gt_matched.as_matrix([self.cfg.label_range])
+            r_vec_est = self.data_frame_est_matched.as_matrix([self.cfg.label_range])
+        else:
+            r_vec_gt = self.data_frame_gt_matched[[self.cfg.label_range]].to_numpy()
+            r_vec_est = self.data_frame_est_matched[[self.cfg.label_range]].to_numpy()
+
+        if not sorted:
+            r_vec_err = r_vec_gt - r_vec_est
+            t_vec = t_vec_gt
+            if remove_outlier:
+                if not self.cfg.remove_outliers:
+                    indices = np.nonzero((r_vec_est == self.cfg.range_error_val))
+                else:
+                    indices = np.nonzero((abs(r_vec_est) > self.cfg.max_range))
+
+                t_vec = np.delete(t_vec, indices, axis=0, )
+                r_vec_err = np.delete(r_vec_err, indices, axis=0)
+
+            AssociateRanges.ax_plot_n_dim(ax, t_vec, r_vec_err, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
+            ax.grid(b=True)
+            ax.set_ylabel('range error')
+            ax.set_xlabel('time [s]')
+            AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
+
+        else:
+            r_vec_err = r_vec_gt - r_vec_est
+            gt_indices_sorted = np.argsort(r_vec_err, axis=0)
+            x_arr = range(len(r_vec_gt))
+            AssociateRanges.ax_plot_n_dim(ax, x_arr, np.take_along_axis(r_vec_err, gt_indices_sorted, axis=0),
+                                          colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
+
+            ax.grid(b=True)
+            ax.set_ylabel('range error')
+            ax.set_xlabel('range sorted index')
+            AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
+
+        return fig, ax
 
     def save(self, result_dir=None, prefix=None):
         if not result_dir:
@@ -208,7 +323,6 @@ class AssociateRanges:
 
         self.data_frame_est_matched.to_csv(fn_est_, sep=',', index=False)
         self.data_frame_gt_matched.to_csv(fn_gt_, sep=',', index=False)
-
 
     @staticmethod
     def subsample_DataFrame(df, step=None, num_max_points=None, verbose=False):
@@ -236,16 +350,15 @@ class AssociateRanges:
     def sample_DataFrame(df, indices_arr):
         num_elems = len(df.index)
         assert (len(indices_arr) <= num_elems), "sample_DataFrame():\n\t index array must be smaller " \
-                                                    "equal the dataframe."
+                                                "equal the dataframe."
         assert (max(indices_arr) <= num_elems), "sample_DataFrame():\n\t elements in the index array " \
-                                                    "must be smaller equal the dataframe."
+                                                "must be smaller equal the dataframe."
         assert (min(indices_arr) >= 0), "sample_DataFrame():\n\t elemts in the index array " \
-                                                    "must be greater equal zero."
+                                        "must be greater equal zero."
 
         df_sub = df.iloc[indices_arr]
         df_sub.reset_index(inplace=True, drop=True)
         return df_sub
-
 
     @staticmethod
     def ax_plot_n_dim(ax, x_linespace, values,
@@ -261,6 +374,7 @@ class AssociateRanges:
         else:
             ax.plot(x_linespace, values, color=colors[0], label=labels[0], linestyle=ls.linestyle,
                     linewidth=ls.linewidth)
+
     @staticmethod
     def ax_x_linespace(ax, ts=None, dist_vec=None, relative_time=True, plot_type=None, x_label_prefix=''):
         if plot_type == "plot_2D_over_dist":
@@ -276,8 +390,8 @@ class AssociateRanges:
         return x_arr
 
     @staticmethod
-    def show_save_figure(fig, save_fn="",  result_dir=".", dpi = 200, show = True, close_figure = False):
-        assert(isinstance(fig, plt.Figure))
+    def show_save_figure(fig, save_fn="", result_dir=".", dpi=200, show=True, close_figure=False):
+        assert (isinstance(fig, plt.Figure))
         plt.pause(0.01)
         plt.draw()
         plt.pause(0.01)

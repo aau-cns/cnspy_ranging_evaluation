@@ -27,24 +27,26 @@ import math
 import pandas as pandas
 import numpy as np
 from cnspy_timestamp_association.TimestampAssociation import TimestampAssociation
-from pkgs.f_ranging_evaluation.cnspy_ranging_evaluation.AssociateRanges import AssociateRanges
+from pkgs.f_ranging_evaluation.cnspy_ranging_evaluation.AssociateRanges import AssociateRanges, AssociateRangesCfg
 from matplotlib import pyplot as plt
 
 class RangeEvaluation:
-    report = None
 
+    report = None
     def __init__(self,
                  fn_gt,
                  fn_est,
                  UWB_ID1=0, UWB_ID2_arr=[1],
                  result_dir=None,
                  prefix=None,
+                 cfg = AssociateRangesCfg(),
                  subsample=0,
                  plot=False,
                  save_plot=False,
                  show_plot=False,
                  max_difference=0.01,
                  relative_timestamps=True,
+                 remove_outliers=False,
                  verbose=False):
         if not result_dir:
             result_dir = '.'
@@ -56,24 +58,42 @@ class RangeEvaluation:
 
         fig_t = plt.figure(figsize=(20, 15), dpi=int(200))
         fig_r = plt.figure(figsize=(20, 15), dpi=int(200))
-
+        fig_rs = plt.figure(figsize=(20, 15), dpi=int(200))
+        fig_e = plt.figure(figsize=(20, 15), dpi=int(200))
         n_rows = len(UWB_ID2_arr)
         idx = 1
         for UWB_ID2 in UWB_ID2_arr:
-            assoc = AssociateRanges(fn_gt=fn_gt, fn_est=fn_est, UWB_ID1=int(UWB_ID1), UWB_ID2=int(UWB_ID2),
-                                           max_difference=max_difference,
-                                           relative_timestamps=relative_timestamps,
-                                           subsample=subsample, verbose=verbose)
+            cfg.UWB_ID1 = int(UWB_ID1)
+            cfg.UWB_ID2 = int(UWB_ID2)
+            cfg_title = str("ID" + str(UWB_ID1) + " to ID" + str(UWB_ID2))
+            assoc = AssociateRanges(fn_gt=fn_gt, fn_est=fn_est, cfg=cfg)
 
             ax_t = fig_t.add_subplot(n_rows, 1, idx)
             ax_r = fig_r.add_subplot(n_rows, 1, idx)
-            assoc.plot_timestamps(fig=fig_t, ax=ax_t)
-            assoc.plot_ranges(fig=fig_r, ax=ax_r)
+            ax_rs = fig_rs.add_subplot(n_rows, 1, idx)
+            ax_e = fig_e.add_subplot(n_rows, 1, idx)
+            assoc.plot_timestamps(fig=fig_t, ax=ax_t, calc_error=True, cfg_title=cfg_title)
+            assoc.plot_ranges(fig=fig_r, ax=ax_r, cfg_title=cfg_title)
+            assoc.plot_ranges(fig=fig_rs, ax=ax_rs, sorted=True, cfg_title=cfg_title)
+            assoc.plot_range_error(fig=fig_e, ax=ax_e, sorted=False, remove_outlier=True, cfg_title=cfg_title)
             idx += 1
         if verbose:
             print("* RangeEvaluation(): ranges associated!")
 
         assoc.save(result_dir=result_dir, prefix=prefix)
+
+        SMALL_SIZE = 8
+        MEDIUM_SIZE = 10
+        BIGGER_SIZE = 12
+
+        plt.rc('font', size=SMALL_SIZE)  # controls default text sizes
+        plt.rc('axes', titlesize=SMALL_SIZE)  # fontsize of the axes title
+        plt.rc('axes', labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
+        plt.rc('xtick', labelsize=SMALL_SIZE)  # fontsize of the tick labels
+        plt.rc('ytick', labelsize=SMALL_SIZE)  # fontsize of the tick labels
+        plt.rc('legend', fontsize=SMALL_SIZE)  # legend fontsize
+        plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
         plt.show()
 
 if __name__ == "__main__":
@@ -86,31 +106,46 @@ if __name__ == "__main__":
     parser.add_argument('--UWB_ID1', help='ID of TX', default='0')
     parser.add_argument('--UWB_ID2s', help='ID of RX', nargs='+', default=[1])
     parser.add_argument('--prefix', help='prefix in results', default='')
-    parser.add_argument('--max_timestamp_difference', help='Max difference between associated timestampes (t_gt - t_est)', default=0.01)
+    parser.add_argument('--max_timestamp_difference', help='Max difference between associated timestampes (t_gt - t_est)', default=0.03)
     parser.add_argument('--subsample', help='subsampling factor for input data (CSV)', default=0)
     parser.add_argument('--plot', action='store_true', default=False)
     parser.add_argument('--save_plot', action='store_true', default=False)
     parser.add_argument('--show_plot', action='store_true', default=False)
-    parser.add_argument('--relative_timestamp', action='store_true', default=False)
+    parser.add_argument('--relative_timestamps', action='store_true', default=False)
+    parser.add_argument('--remove_outliers', action='store_true', default=False)
     parser.add_argument('--verbose', action='store_true', default=False)
-
-
+    parser.add_argument('--max_range', help='range that classifies as outlier', default='30')
+    parser.add_argument('--range_error_val', help='value assigned to outlier', default='0')
+    parser.add_argument('--label_timestamp', help='timestamp label in CSV', default='t')
+    parser.add_argument('--label_range', help='range label in CSV', default='range_raw')
+    parser.add_argument('--label_ID1', help='ID1 label in CSV', default='UWB_ID1')
+    parser.add_argument('--label_ID2', help='ID2 label in CSV', default='UWB_ID2')
     tp_start = time.time()
     args = parser.parse_args()
+    cfg = AssociateRangesCfg(UWB_ID1=None,
+                             UWB_ID2=None,
+                             relative_timestamps=args.relative_timestamps,
+                             max_difference=args.max_timestamp_difference,
+                             subsample=args.subsample,
+                             verbose=args.verbose,
+                             remove_outliers=args.remove_outliers,
+                             max_range=float(args.max_range),
+                             range_error_val=float(args.range_error_val),
+                             label_timestamp=args.label_timestamp,
+                             label_ID1=args.label_ID1,
+                             label_ID2=args.label_ID2,
+                             label_range = args.label_range)
 
     eval = RangeEvaluation( fn_gt=args.fn_gt,
                             fn_est=args.fn_est,
                             UWB_ID1=int(args.UWB_ID1),
                             UWB_ID2_arr=args.UWB_ID2s,
+                            cfg=cfg,
                             result_dir=args.result_dir,
                             prefix=args.prefix,
-                            max_difference=args.max_timestamp_difference,
-                            subsample=int(args.subsample),
                             plot=args.plot,
                             save_plot=args.save_plot,
-                            show_plot=args.show_plot,
-                            relative_timestamps=args.relative_timestamp,
-                            verbose=args.verbose)
+                            show_plot=args.show_plot,)
 
     print(" ")
     print("finished after [%s sec]\n" % str(time.time() - tp_start))
