@@ -26,6 +26,8 @@ import time
 import math
 import pandas as pandas
 import numpy as np
+
+import cnspy_numpy_utils.numpy_statistics
 from cnspy_timestamp_association.TimestampAssociation import TimestampAssociation
 from pkgs.f_ranging_evaluation.cnspy_ranging_evaluation.AssociateRanges import AssociateRanges, AssociateRangesCfg
 from matplotlib import pyplot as plt
@@ -67,6 +69,7 @@ class RangeEvaluation:
             cfg.UWB_ID2 = int(UWB_ID2)
             cfg_title = str("ID" + str(UWB_ID1) + " to ID" + str(UWB_ID2))
             assoc = AssociateRanges(fn_gt=fn_gt, fn_est=fn_est, cfg=cfg)
+            assoc.save(result_dir=result_dir, prefix=prefix+cfg_title)
 
             ax_t = fig_t.add_subplot(n_rows, 1, idx)
             ax_r = fig_r.add_subplot(n_rows, 1, idx)
@@ -75,24 +78,11 @@ class RangeEvaluation:
             assoc.plot_timestamps(fig=fig_t, ax=ax_t, calc_error=True, cfg_title=cfg_title)
             assoc.plot_ranges(fig=fig_r, ax=ax_r, cfg_title=cfg_title)
             assoc.plot_ranges(fig=fig_rs, ax=ax_rs, sorted=True, cfg_title=cfg_title)
-            assoc.plot_range_error(fig=fig_e, ax=ax_e, sorted=False, remove_outlier=True, cfg_title=cfg_title)
+            [fig, ax, stat] = assoc.plot_range_error(fig=fig_e, ax=ax_e, sorted=False, remove_outlier=True, cfg_title=cfg_title)
+            cnspy_numpy_utils.numpy_statistics.print_statistics(stat, desc=cfg_title + " error")
             idx += 1
         if verbose:
             print("* RangeEvaluation(): ranges associated!")
-
-        assoc.save(result_dir=result_dir, prefix=prefix)
-
-        SMALL_SIZE = 8
-        MEDIUM_SIZE = 10
-        BIGGER_SIZE = 12
-
-        plt.rc('font', size=SMALL_SIZE)  # controls default text sizes
-        plt.rc('axes', titlesize=SMALL_SIZE)  # fontsize of the axes title
-        plt.rc('axes', labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
-        plt.rc('xtick', labelsize=SMALL_SIZE)  # fontsize of the tick labels
-        plt.rc('ytick', labelsize=SMALL_SIZE)  # fontsize of the tick labels
-        plt.rc('legend', fontsize=SMALL_SIZE)  # legend fontsize
-        plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
         plt.show()
 

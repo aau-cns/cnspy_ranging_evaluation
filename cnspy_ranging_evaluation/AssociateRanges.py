@@ -27,6 +27,7 @@ from matplotlib import pyplot as plt
 import pandas as pandas
 import math
 
+from cnspy_numpy_utils.numpy_statistics import *
 from cnspy_timestamp_association.TimestampAssociation import TimestampAssociation
 
 
@@ -297,9 +298,19 @@ class AssociateRanges:
 
         else:
             r_vec_err = r_vec_gt - r_vec_est
-            gt_indices_sorted = np.argsort(r_vec_err, axis=0)
-            x_arr = range(len(r_vec_gt))
-            AssociateRanges.ax_plot_n_dim(ax, x_arr, np.take_along_axis(r_vec_err, gt_indices_sorted, axis=0),
+            x_arr = r_vec_gt
+            if remove_outlier:
+                if not self.cfg.remove_outliers:
+                    indices = np.nonzero((r_vec_est == self.cfg.range_error_val))
+                else:
+                    indices = np.nonzero((abs(r_vec_est) > self.cfg.max_range))
+
+                x_arr = np.delete(x_arr, indices, axis=0, )
+                r_vec_err = np.delete(r_vec_err, indices, axis=0)
+
+            gt_indices_sorted = np.argsort(x_arr, axis=0)
+            #x_arr = range(len(r_vec_gt))
+            AssociateRanges.ax_plot_n_dim(ax, np.take_along_axis(x_arr, gt_indices_sorted, axis=0), np.take_along_axis(r_vec_err, gt_indices_sorted, axis=0),
                                           colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
 
             ax.grid(b=True)
@@ -307,7 +318,8 @@ class AssociateRanges:
             ax.set_xlabel('range sorted index')
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
 
-        return fig, ax
+        stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_vec_err)))
+        return fig, ax, stat
 
     def save(self, result_dir=None, prefix=None):
         if not result_dir:
