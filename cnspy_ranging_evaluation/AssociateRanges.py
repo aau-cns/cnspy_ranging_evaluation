@@ -253,17 +253,7 @@ class AssociateRanges:
 
         return fig, ax
 
-    def plot_range_error(self, cfg_dpi=200, cfg_title="ranges", sorted=False, remove_outlier=True, fig=None, ax=None,
-                    colors=['r', 'g'], labels=['gt', 'est'],
-                    ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
-                    save_fn="", result_dir="."):
-        if fig is None:
-            fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
-        if ax is None:
-            ax = fig.add_subplot(111)
-        if cfg_title:
-            ax.set_title(cfg_title)
-
+    def compute_error(self, sort=False, remove_outlier=True):
         if version_info[0] < 3:
             t_vec_gt = self.data_frame_gt_matched.as_matrix([self.cfg.label_timestamp])
             t_vec_est = self.data_frame_est_matched.as_matrix([self.cfg.label_timestamp])
@@ -278,7 +268,7 @@ class AssociateRanges:
             r_vec_gt = self.data_frame_gt_matched[[self.cfg.label_range]].to_numpy()
             r_vec_est = self.data_frame_est_matched[[self.cfg.label_range]].to_numpy()
 
-        if not sorted:
+        if not sort:
             r_vec_err = r_vec_gt - r_vec_est
             t_vec = t_vec_gt
             if remove_outlier:
@@ -289,13 +279,7 @@ class AssociateRanges:
 
                 t_vec = np.delete(t_vec, indices, axis=0, )
                 r_vec_err = np.delete(r_vec_err, indices, axis=0)
-
-            AssociateRanges.ax_plot_n_dim(ax, t_vec, r_vec_err, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
-            ax.grid(b=True)
-            ax.set_ylabel('range error')
-            ax.set_xlabel('time [s]')
-            AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
-
+                return [t_vec, r_vec_err]
         else:
             r_vec_err = r_vec_gt - r_vec_est
             x_arr = r_vec_gt
@@ -310,7 +294,31 @@ class AssociateRanges:
 
             gt_indices_sorted = np.argsort(x_arr, axis=0)
             #x_arr = range(len(r_vec_gt))
-            AssociateRanges.ax_plot_n_dim(ax, np.take_along_axis(x_arr, gt_indices_sorted, axis=0), np.take_along_axis(r_vec_err, gt_indices_sorted, axis=0),
+            t_vec = np.take_along_axis(x_arr, gt_indices_sorted, axis=0)
+            r_vec = np.take_along_axis(r_vec_err, gt_indices_sorted, axis=0)
+            return [t_vec, r_vec]
+
+    def plot_range_error(self, cfg_dpi=200, cfg_title="ranges", sorted=False, remove_outlier=True, fig=None, ax=None,
+                    colors=['r', 'g'], labels=['gt', 'est'],
+                    ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
+                    save_fn="", result_dir="."):
+        if fig is None:
+            fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
+        if ax is None:
+            ax = fig.add_subplot(111)
+        if cfg_title:
+            ax.set_title(cfg_title)
+
+        [t_vec, r_vec_err] = self.compute_error(sort=sorted, remove_outlier=remove_outlier)
+        if not sorted:
+            AssociateRanges.ax_plot_n_dim(ax, t_vec, r_vec_err, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
+            ax.grid(b=True)
+            ax.set_ylabel('range error')
+            ax.set_xlabel('time [s]')
+            AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
+
+        else:
+            AssociateRanges.ax_plot_n_dim(ax, t_vec, r_vec_err,
                                           colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
 
             ax.grid(b=True)
@@ -319,7 +327,28 @@ class AssociateRanges:
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
 
         stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_vec_err)))
-        return fig, ax, stat
+        return fig, ax, stat, r_vec_err
+
+    def plot_error_histogram(self, cfg_dpi=200, fig=None, ax=None,
+                         save_fn="", result_dir="."):
+        if fig is None:
+            fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
+        if ax is None:
+            ax = fig.add_subplot(111)
+
+        [t_vec, r_vec_err] = self.compute_error(sort=True, remove_outlier=True)
+        stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_vec_err)))
+        n, bins, patches = ax.hist(r_vec_err)
+
+        # add a 'best fit' line
+        sigma = stat['std']
+        mu = stat['mean']
+        y = ((1 / (np.sqrt(2 * np.pi) * sigma)) *
+             np.exp(-0.5 * (1 / sigma * (bins - mu)) ** 2))
+        ax.plot(bins, y, '--')
+        ax.set_ylabel('Probability density')
+        ax.set_title(r'Histogram: $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+        pass
 
     def save(self, result_dir=None, prefix=None):
         if not result_dir:
@@ -335,6 +364,8 @@ class AssociateRanges:
 
         self.data_frame_est_matched.to_csv(fn_est_, sep=',', index=False)
         self.data_frame_gt_matched.to_csv(fn_gt_, sep=',', index=False)
+
+
 
     @staticmethod
     def subsample_DataFrame(df, step=None, num_max_points=None, verbose=False):

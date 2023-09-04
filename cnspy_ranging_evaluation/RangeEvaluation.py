@@ -58,6 +58,20 @@ class RangeEvaluation:
         fn_gt = os.path.abspath(fn_gt)
         fn_est = os.path.abspath(fn_est)
 
+        plt.style.use('ggplot')
+
+        SMALL_SIZE = 7
+        MEDIUM_SIZE = 8
+        BIGGER_SIZE = 9
+
+        plt.rc('font', size=SMALL_SIZE)  # controls default text sizes
+        plt.rc('axes', titlesize=SMALL_SIZE)  # fontsize of the axes title
+        plt.rc('axes', labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
+        plt.rc('xtick', labelsize=SMALL_SIZE)  # fontsize of the tick labels
+        plt.rc('ytick', labelsize=SMALL_SIZE)  # fontsize of the tick labels
+        plt.rc('legend', fontsize=SMALL_SIZE)  # legend fontsize
+        plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
         fig_t = plt.figure(figsize=(20, 15), dpi=int(200))
         fig_r = plt.figure(figsize=(20, 15), dpi=int(200))
         fig_rs = plt.figure(figsize=(20, 15), dpi=int(200))
@@ -74,16 +88,24 @@ class RangeEvaluation:
             ax_t = fig_t.add_subplot(n_rows, 1, idx)
             ax_r = fig_r.add_subplot(n_rows, 1, idx)
             ax_rs = fig_rs.add_subplot(n_rows, 1, idx)
-            ax_e = fig_e.add_subplot(n_rows, 1, idx)
+            ax_e = fig_e.add_subplot(n_rows, 2, (idx*2)-1)
             assoc.plot_timestamps(fig=fig_t, ax=ax_t, calc_error=True, cfg_title=cfg_title)
             assoc.plot_ranges(fig=fig_r, ax=ax_r, cfg_title=cfg_title)
             assoc.plot_ranges(fig=fig_rs, ax=ax_rs, sorted=True, cfg_title=cfg_title)
-            [fig, ax, stat] = assoc.plot_range_error(fig=fig_e, ax=ax_e, sorted=False, remove_outlier=True, cfg_title=cfg_title)
+            [fig, ax, stat, r_vec_err] = assoc.plot_range_error(fig=fig_e, ax=ax_e, sorted=False, remove_outlier=True, cfg_title=cfg_title)
             cnspy_numpy_utils.numpy_statistics.print_statistics(stat, desc=cfg_title + " error")
+            ax_e = fig_e.add_subplot(n_rows, 2, idx * 2)
+            # the histogram of the date
+            assoc.plot_error_histogram(fig=fig_e, ax=ax_e)
             idx += 1
         if verbose:
             print("* RangeEvaluation(): ranges associated!")
 
+        # Tweak spacing to prevent clipping of ylabel
+        fig_t.tight_layout()
+        fig_r.tight_layout()
+        fig_rs.tight_layout()
+        fig_e.tight_layout()
         plt.show()
 
 if __name__ == "__main__":
