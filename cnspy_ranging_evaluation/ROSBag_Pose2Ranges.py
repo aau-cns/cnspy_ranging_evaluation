@@ -93,6 +93,12 @@ class ROSbag2CSV:
         dict_cfg = None
         with open(cfg, "r") as yamlfile:
             dict_cfg = yaml.load(yamlfile, Loader=yaml.FullLoader)
+            if "rel_tag_positions" not in dict_cfg:
+                print("[rel_tag_positions] does not exist in fn=" + cfg)
+                return False
+            if "abs_anchor_positions" not in dict_cfg:
+                print("[abs_anchor_positions] does not exist in fn=" + cfg)
+                return False
             print("Read successful")
         if verbose:
             print("configuration contains:")
@@ -133,10 +139,10 @@ class ROSbag2CSV:
             print("ROSbag2CSV: Not a proper topic name: %s (should start with /)" % topicName)
             return False
 
-        if not fn_list:
+        if not filename:
             filename = str(folder + '/') + str.replace(topicName[1:], '/', '_') + '.csv'
         else:
-            fn = fn_list[idx]
+            fn = filename
             [root, ext] = os.path.splitext(fn)
             [head, tail] = os.path.split(root)
             if ext:
@@ -152,8 +158,6 @@ class ROSbag2CSV:
 
         if verbose:
             print("ROSbag2CSV: creating csv file: %s " % filename)
-
-        idx = idx + 1
 
         ## check if desired topics are in the bag file:
         num_messages = info_dict['messages']
