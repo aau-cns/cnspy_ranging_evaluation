@@ -124,7 +124,14 @@ class ROSbag2CSV:
         pass
 
     @staticmethod
-    def extract(bagfile_in_name, bagfile_out_name, topic_pose, cfg, std_range=0.1, bias_offset=0, bias_range=1,
+    def extract(bagfile_in_name,
+                bagfile_out_name,
+                topic_pose,
+                cfg,
+                std_range=0.1,
+                bias_offset=0,
+                bias_range=1,
+                use_header_timestamp = False,
                 verbose=False):
         if not os.path.isfile(bagfile_in_name):
             print("ROSbag2CSV: could not find file: %s" % bagfile_in_name)
@@ -145,7 +152,7 @@ class ROSbag2CSV:
             print("* std_range: " + str(std_range))
             print("* bias_offset: " + str(bias_offset))
             print("* bias_range: " + str(bias_range))
-
+            print("* use_header_timestamp: " + str(use_header_timestamp))
         ## Open BAG file:
         try:
             bag = rosbag.Bag(bagfile_in_name)
@@ -285,12 +292,20 @@ class ROSbag2CSV:
                             d_TA = LA.norm(t_TA)
                             msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
                             msg.range_corr = d_TA
+                            msg.R = std_range*std_range
                             idx += 1
                             pass
-                        outbag.write(topic, msg, t)
+
+                        if use_header_timestamp and hasattr(msg, "header"):
+                            outbag.write(topic, msg, msg.header.stamp)
+                        else:
+                            outbag.write(topic, msg, t)
                         pass
                     else:
-                        outbag.write(topic, msg, t)
+                        if use_header_timestamp and hasattr(msg, "header"):
+                            outbag.write(topic, msg, msg.header.stamp)
+                        else:
+                            outbag.write(topic, msg, t)
                     pass
         except AssertionError as error:
             print(error)
@@ -322,14 +337,18 @@ if __name__ == "__main__":
                         default=0.0)
     parser.add_argument('--bias_range',
                         help='range-based biased multiplied to generated measurements: z = bias_range * d', default=1.0)
-
+    parser.add_argument('--use_header_timestamp', action='store_true',
+                        help='overwrites the bag time with the header time stamp', default=False)
     tp_start = time.time()
     args = parser.parse_args()
 
-    if ROSbag2CSV.extract(bagfile_in_name=args.bagfile_in, bagfile_out_name=args.bagfile_out,
+    if ROSbag2CSV.extract(bagfile_in_name=args.bagfile_in,
+                          bagfile_out_name=args.bagfile_out,
                           topic_pose=str(args.topic_pose), cfg=args.cfg,
-                          verbose=args.verbose, std_range=float(args.std_range), bias_offset=float(args.bias_offset),
-                          bias_range=float(args.bias_range)):
+                          verbose=args.verbose, std_range=float(args.std_range),
+                          bias_offset=float(args.bias_offset),
+                          bias_range=float(args.bias_range),
+                          use_header_timestamp=args.use_header_timestamp):
         print(" ")
         print("finished after [%s sec]\n" % str(time.time() - tp_start))
     else:
