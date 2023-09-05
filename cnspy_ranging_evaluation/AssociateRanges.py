@@ -116,9 +116,14 @@ class AssociateRanges:
 
         if cfg.remove_outliers:
             self.csv_df_est[cfg.label_range] = self.csv_df_est[cfg.label_range].where(
-                abs(self.csv_df_est[cfg.label_range]) > cfg.max_range, other=cfg.range_error_val)
+                abs(self.csv_df_est[cfg.label_range]) < 0, other=cfg.range_error_val)
+            self.csv_df_est[cfg.label_range] = self.csv_df_est[cfg.label_range].where(
+                self.csv_df_est[cfg.label_range] > cfg.max_range, other=cfg.range_error_val)
+
         else:
-            indices = (abs(self.csv_df_est[cfg.label_range]) > cfg.max_range)
+            indices = ((self.csv_df_est[cfg.label_range]) < 0)
+            self.csv_df_est.loc[indices, cfg.label_range] = cfg.range_error_val
+            indices = (self.csv_df_est[cfg.label_range] > cfg.max_range)
             self.csv_df_est.loc[indices, cfg.label_range] = cfg.range_error_val
 
         if cfg.subsample > 1:
@@ -253,7 +258,7 @@ class AssociateRanges:
 
         return fig, ax
 
-    def compute_error(self, sort=False, remove_outlier=True):
+    def compute_error(self, sort=False, remove_outlier=True, max_error=None):
         if version_info[0] < 3:
             t_vec_gt = self.data_frame_gt_matched.as_matrix([self.cfg.label_timestamp])
             t_vec_est = self.data_frame_est_matched.as_matrix([self.cfg.label_timestamp])
@@ -279,18 +284,31 @@ class AssociateRanges:
 
                 t_vec = np.delete(t_vec, indices, axis=0, )
                 r_vec_err = np.delete(r_vec_err, indices, axis=0)
+
+                if max_error:
+                    indices = np.nonzero((abs(r_vec_err) > max_error))
+                    t_vec = np.delete(t_vec, indices, axis=0, )
+                    r_vec_err = np.delete(r_vec_err, indices, axis=0)
+
                 return [t_vec, r_vec_err]
         else:
             r_vec_err = r_vec_gt - r_vec_est
             x_arr = r_vec_gt
             if remove_outlier:
-                if not self.cfg.remove_outliers:
+                if not self.cfg.remove_outliers and not max_error:
                     indices = np.nonzero((r_vec_est == self.cfg.range_error_val))
                 else:
                     indices = np.nonzero((abs(r_vec_est) > self.cfg.max_range))
 
                 x_arr = np.delete(x_arr, indices, axis=0, )
                 r_vec_err = np.delete(r_vec_err, indices, axis=0)
+
+                if max_error:
+                    indices = np.nonzero((abs(r_vec_err) > max_error))
+                    x_arr = np.delete(x_arr, indices, axis=0, )
+                    r_vec_err = np.delete(r_vec_err, indices, axis=0)
+
+
 
             gt_indices_sorted = np.argsort(x_arr, axis=0)
             #x_arr = range(len(r_vec_gt))
@@ -330,15 +348,16 @@ class AssociateRanges:
         return fig, ax, stat, r_vec_err
 
     def plot_error_histogram(self, cfg_dpi=200, fig=None, ax=None,
-                         save_fn="", result_dir="."):
+                         save_fn="", result_dir=".", max_error=None):
         if fig is None:
             fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
         if ax is None:
             ax = fig.add_subplot(111)
 
-        [t_vec, r_vec_err] = self.compute_error(sort=True, remove_outlier=True)
+        [t_vec, r_vec_err] = self.compute_error(sort=True, remove_outlier=True, max_error=max_error)
+        num_bins = 50
         stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_vec_err)))
-        n, bins, patches = ax.hist(r_vec_err)
+        n, bins, patches = ax.hist(r_vec_err, num_bins)
 
         # add a 'best fit' line
         sigma = stat['std']

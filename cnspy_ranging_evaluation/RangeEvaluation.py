@@ -60,9 +60,9 @@ class RangeEvaluation:
 
         plt.style.use('ggplot')
 
-        SMALL_SIZE = 7
-        MEDIUM_SIZE = 8
-        BIGGER_SIZE = 9
+        SMALL_SIZE = 6
+        MEDIUM_SIZE = 7
+        BIGGER_SIZE = 8
 
         plt.rc('font', size=SMALL_SIZE)  # controls default text sizes
         plt.rc('axes', titlesize=SMALL_SIZE)  # fontsize of the axes title
@@ -96,7 +96,7 @@ class RangeEvaluation:
             cnspy_numpy_utils.numpy_statistics.print_statistics(stat, desc=cfg_title + " error")
             ax_e = fig_e.add_subplot(n_rows, 2, idx * 2)
             # the histogram of the date
-            assoc.plot_error_histogram(fig=fig_e, ax=ax_e)
+            assoc.plot_error_histogram(fig=fig_e, ax=ax_e, max_error=1)
             idx += 1
         if verbose:
             print("* RangeEvaluation(): ranges associated!")
