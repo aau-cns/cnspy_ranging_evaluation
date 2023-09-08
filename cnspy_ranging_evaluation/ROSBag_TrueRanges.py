@@ -18,6 +18,7 @@
 # BASED ON: https://github.com/aau-cns/cnspy_rosbag2csv
 # just install "pip install cnspy-rosbag2csv"
 ########################################################################################################################
+from docutils.nodes import topic
 
 import rosbag
 import time
@@ -70,15 +71,17 @@ class HistoryBuffer:
         idx = 0
         for t_ in self.t_vec:
             if t_ >= t:
-                return max(0, idx - 1)
+                # if idx = 0:  not in list
+                return idx - 1
             idx += 1
-        return len(self.t_vec)
+        # not in list
+        return -1
 
     def get_idx_after_t(self, t):
         idx = 0
         for t_ in self.t_vec:
             if t_ >= t:
-                return max(0, idx)
+                return idx
             idx += 1
         # not in list
         return -1
@@ -100,11 +103,15 @@ class HistoryBuffer:
 
     def get_before_t(self, t):
         idx = self.get_idx_before_t(t)
-        return [self.t_vec[idx], self.val_vec[idx]]
+        if idx != -1 and idx < len(self.t_vec):
+            return [self.t_vec[idx], self.val_vec[idx]]
+        else:
+            return [None, None]
+        pass
 
     def get_at_t(self, t):
-        idx = self.get_idx_before_t(t)
-        if idx != -1:
+        idx = self.get_idx_at_t(t)
+        if idx != -1 and idx < len(self.t_vec):
             return [self.t_vec[idx], self.val_vec[idx]]
         else:
             return [None, None]
@@ -112,7 +119,7 @@ class HistoryBuffer:
 
     def get_after_t(self, t):
         idx = self.get_idx_after_t(t)
-        if idx != -1:
+        if idx != -1 and idx < len(self.t_vec):
             return [self.t_vec[idx], self.val_vec[idx]]
         else:
             return [None, None]
@@ -172,6 +179,9 @@ class ROSbag2CSV:
             if "tag_topics" not in dict_cfg:
                 print("[tag_topics] does not exist in fn=" + cfg)
                 return False
+            if "anchor_topics" not in dict_cfg:
+                print("[anchor_topics] does not exist in fn=" + cfg)
+                return False
             if "abs_anchor_positions" not in dict_cfg:
                 print("[abs_anchor_positions] does not exist in fn=" + cfg)
                 return False
@@ -181,6 +191,7 @@ class ROSbag2CSV:
             print("configuration contains:")
             print("* rel_tag_positions:" + str(dict_cfg["rel_tag_positions"]))
             print("* tag_topics:" + str(dict_cfg["tag_topics"]))
+            print("* anchor_topics:" + str(dict_cfg["anchor_topics"]))
             print("* abs_anchor_positions:" + str(dict_cfg["abs_anchor_positions"]))
 
         info_dict = yaml.load(bag._get_yaml_info(), Loader=yaml.FullLoader)
@@ -192,24 +203,30 @@ class ROSbag2CSV:
             return False
 
         ## create csv file according to the topic names:
-        topicName = topic_pose
-        if topicName[0] != '/':
-            print("ROSbag2CSV: Not a proper topic name: %s (should start with /)" % topicName)
+        if topic_pose[0] != '/':
+            print("ROSbag2CSV: Not a proper topic name: %s (should start with /)" % topic_pose)
             return False
 
         ## check if desired pose topic is  in the bag file:
         num_messages = info_dict['messages']
         bag_topics = info_dict['topics']
-        topicName = topic_pose
-        found = False
-        for topic_info in bag_topics:
-            if topic_info['topic'] == topicName:
-                found = True
-        if not found:
-            print("# WARNING: desired topic [" + str(topicName) + "] is not in bag file!")
 
         ## check if desired topics are in the bag file:
+        found = False
+        for topic_info in bag_topics:
+            if topic_info['topic'] == topic_pose:
+                found = True
+        if not found:
+            print("# WARNING: desired topic [" + str(topic_pose) + "] is not in bag file!")
+
         for key, val in dict_cfg["tag_topics"].items():
+            found = False
+            for topic_info in bag_topics:
+                if topic_info['topic'] == val:
+                    found = True
+            if not found:
+                print("# WARNING: desired topic [" + str(val) + "] is not in bag file!")
+        for key, val in dict_cfg["anchor_topics"].items():
             found = False
             for topic_info in bag_topics:
                 if topic_info['topic'] == val:
@@ -255,24 +272,35 @@ class ROSbag2CSV:
 
         noise_range_arr = np.random.normal(0, std_range, size=num_messages)  # 1000 samples with normal distribution
         idx = 0
+
+        cnt_T2A = 0
+        cnt_A2T = 0
+        cnt_A2A = 0
+        cnt_T2T = 0
         ## extract the desired topics from the BAG file
         try:  # else already exists
             print("ROSbag2CSV: computing new range measurements...")
             with rosbag.Bag(bagfile_out_name, 'w') as outbag:
                 for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
                     if topic in dict_cfg["tag_topics"].values():
-                        TAG_ID = get_key_from_value(dict_cfg["tag_topics"], topic)
+                        TAG_ID1 = get_key_from_value(dict_cfg["tag_topics"], topic)
                         text = str("topic: " + str(topic) + " has wrong expected tag id! expected=" + str(
-                            TAG_ID) + " got=" + str(msg.UWB_ID1))
-                        assert (int(TAG_ID) == int(msg.UWB_ID1)), text
+                            TAG_ID1) + " got=" + str(msg.UWB_ID1))
+                        assert (int(TAG_ID1) == int(msg.UWB_ID1)), text
 
-                        t_bt = dict_cfg["rel_tag_positions"][TAG_ID]
-                        T_BODY_TAG = SE3(np.array(t_bt))
+                        t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
+                        T_BODY_TAG1 = SE3(np.array(t_bt1))
                         timestamp = round(msg.header.stamp.to_sec(), round_decimals)
                         if hist_poses.exists_at_t(timestamp) is None:
                             # interpolate between poses
                             [t1, T_GLOBAL_BODY_T1] = hist_poses.get_before_t(timestamp)
                             [t2, T_GLOBAL_BODY_T2] = hist_poses.get_after_t(timestamp)
+
+                            if t1 is None or t2 is None:
+                                if verbose:
+                                    print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                continue
+
                             dt = t2 - t1
                             dt_i = timestamp - t1
                             i = dt_i / dt
@@ -280,20 +308,34 @@ class ROSbag2CSV:
                             # interpolate between poses:
                             vec_t1_t2 = T_GLOBAL_BODY_T1.delta(T_GLOBAL_BODY_T2)
                             T_GLOBAL_BODY = T_GLOBAL_BODY_T1 * SE3.Delta(vec_t1_t2 * i)
-                            pass
                         else:
                             T_GLOBAL_BODY = hist_poses.get_at_t(timestamp)
 
-                        T_GLOBAL_TAG = T_GLOBAL_BODY * T_BODY_TAG
+                        T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
 
+                        # T2A
                         if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
-                            t_GA = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
-                            t_TA = T_GLOBAL_TAG.t - t_GA
+                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
+                            t_TA = T_GLOBAL_TAG1.t - t_GA2
                             d_TA = LA.norm(t_TA)
                             msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
                             msg.range_corr = d_TA
                             msg.R = std_range*std_range
                             idx += 1
+                            cnt_T2A += 1
+                            pass
+                        # T2T
+                        elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
+                            TAG_ID2 = msg.UWB_ID2
+                            t_bt2 = dict_cfg["rel_tag_positions"][TAG_ID2]
+                            T_BODY_TAG2 = SE3(np.array(t_bt2))
+                            T_GLOBAL_TAG2 = T_GLOBAL_BODY * T_BODY_TAG2
+                            d_T1_T2 = LA.norm(T_GLOBAL_TAG1 - T_GLOBAL_TAG2)
+                            msg.range_raw = bias_range * d_T1_T2 + bias_offset + noise_range_arr[idx]
+                            msg.range_corr = d_T1_T2
+                            msg.R = std_range * std_range
+                            idx += 1
+                            cnt_T2T += 1
                             pass
 
                         if use_header_timestamp and hasattr(msg, "header"):
@@ -301,6 +343,61 @@ class ROSbag2CSV:
                         else:
                             outbag.write(topic, msg, t)
                         pass
+                    elif topic in dict_cfg["anchor_topics"].values():
+
+                        ANCHOR_ID1 = get_key_from_value(dict_cfg["anchor_topics"], topic)
+                        text = str("topic: " + str(topic) + " has wrong expected anchor id! expected=" + str(
+                            ANCHOR_ID1) + " got=" + str(msg.UWB_ID1))
+                        assert (int(ANCHOR_ID1) == int(msg.UWB_ID1)), text
+
+                        t_GA1 = np.array(dict_cfg["abs_anchor_positions"][ANCHOR_ID1])
+
+                        # A2A
+                        if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
+                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
+                            d_TA = LA.norm(t_GA1 - t_GA2)
+                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
+                            msg.range_corr = d_TA
+                            msg.R = std_range*std_range
+                            idx += 1
+                            cnt_A2A += 1
+                            pass
+                        # A2T
+                        elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
+                            TAG_ID1 = msg.UWB_ID2
+                            t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
+                            T_BODY_TAG1 = SE3(np.array(t_bt1))
+                            timestamp = round(msg.header.stamp.to_sec(), round_decimals)
+                            if hist_poses.exists_at_t(timestamp) is None:
+                                # interpolate between poses
+                                [t1, T_GLOBAL_BODY_T1] = hist_poses.get_before_t(timestamp)
+                                [t2, T_GLOBAL_BODY_T2] = hist_poses.get_after_t(timestamp)
+
+                                if t1 is None or t2 is None:
+                                    if verbose:
+                                        print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                    continue
+
+                                dt = t2 - t1
+                                dt_i = timestamp - t1
+                                i = dt_i / dt
+
+                                # interpolate between poses:
+                                vec_t1_t2 = T_GLOBAL_BODY_T1.delta(T_GLOBAL_BODY_T2)
+                                T_GLOBAL_BODY = T_GLOBAL_BODY_T1 * SE3.Delta(vec_t1_t2 * i)
+                                pass
+                            else:
+                                T_GLOBAL_BODY = hist_poses.get_at_t(timestamp)
+
+                            T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
+                            t_TA = T_GLOBAL_TAG1.t - t_GA1
+                            d_TA = LA.norm(t_TA)
+                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
+                            msg.range_corr = d_TA
+                            msg.R = std_range*std_range
+                            idx += 1
+                            cnt_A2T += 1
+                            pass
                     else:
                         if use_header_timestamp and hasattr(msg, "header"):
                             outbag.write(topic, msg, msg.header.stamp)
@@ -314,7 +411,10 @@ class ROSbag2CSV:
 
         if verbose:
             print("\nROSbag2CSV: " + str(idx) + " range measurements modified!")
-
+            print("* num. T2T = " + str(cnt_T2T))
+            print("* num. T2A = " + str(cnt_T2A))
+            print("* num. A2A = " + str(cnt_A2A))
+            print("* num. A2T = " + str(cnt_A2T))
         bag.close()
         return True
 
