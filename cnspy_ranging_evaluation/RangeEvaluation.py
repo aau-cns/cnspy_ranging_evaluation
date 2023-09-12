@@ -90,12 +90,18 @@ class RangeEvaluation:
                 fig_h.suptitle('Histograms of ID=' + str(UWB_ID1), fontsize=16)
 
             n = len(UWB_ID2_arr)
-            sqrt_n = math.ceil(math.sqrt(n))
+            sqrt_n = math.floor(math.sqrt(n))
             n_rows = sqrt_n
-            n_cols = sqrt_n
+            if sqrt_n*sqrt_n < n:
+                n_cols = sqrt_n+1
+            else:
+                n_cols = sqrt_n
 
             idx = 1
             for UWB_ID2 in UWB_ID2_arr:
+                if UWB_ID1 == UWB_ID2:
+                    continue
+
                 cfg.UWB_ID1 = int(UWB_ID1)
                 cfg.UWB_ID2 = int(UWB_ID2)
                 cfg_title = str("ID" + str(UWB_ID1) + " to ID" + str(UWB_ID2))
@@ -118,7 +124,7 @@ class RangeEvaluation:
                     [fig, ax, stat, r_vec_err] = assoc.plot_range_error(fig=fig_e, ax=ax_e, sorted=False, remove_outlier=True, cfg_title=cfg_title)
                     cnspy_numpy_utils.numpy_statistics.print_statistics(stat, desc=cfg_title + " error")
                 if plot_histogram:
-                    ax_h = fig_rs.add_subplot(n_rows, n_cols, idx)
+                    ax_h = fig_h.add_subplot(n_rows, n_cols, idx)
                     assoc.plot_error_histogram(fig=fig_h, ax=ax_h, max_error=1)
                 # the histogram of the date
                 idx += 1
@@ -155,8 +161,8 @@ class RangeEvaluation:
                 if save_plot:
                     AssociateRanges.show_save_figure(fig=fig_h, result_dir=result_dir,
                                                      save_fn=str("Histograms_ID" + str(UWB_ID1)), show=False)
-
-            plt.show()
+            if show_plot:
+                plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -205,12 +211,11 @@ if __name__ == "__main__":
 
     eval = RangeEvaluation( fn_gt=args.fn_gt,
                             fn_est=args.fn_est,
-                            UWB_ID1=int(args.UWB_ID1),
+                            UWB_ID1_arr=args.UWB_ID1s,
                             UWB_ID2_arr=args.UWB_ID2s,
                             cfg=cfg,
                             result_dir=args.result_dir,
                             prefix=args.prefix,
-                            plot=args.plot,
                             save_plot=args.save_plot,
                             show_plot=args.show_plot,
                             plot_timestamps=args.plot_timestamps,
