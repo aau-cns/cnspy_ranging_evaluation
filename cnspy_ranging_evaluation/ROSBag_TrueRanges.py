@@ -306,8 +306,7 @@ class ROSbag2CSV:
                             i = dt_i / dt
 
                             # interpolate between poses:
-                            vec_t1_t2 = T_GLOBAL_BODY_T1.delta(T_GLOBAL_BODY_T2)
-                            T_GLOBAL_BODY = T_GLOBAL_BODY_T1 * SE3.Delta(vec_t1_t2 * i)
+                            T_GLOBAL_BODY = T_GLOBAL_BODY_T1.interp(T_GLOBAL_BODY_T2, i)
                         else:
                             T_GLOBAL_BODY = hist_poses.get_at_t(timestamp)
 
@@ -383,8 +382,8 @@ class ROSbag2CSV:
                                 i = dt_i / dt
 
                                 # interpolate between poses:
-                                vec_t1_t2 = T_GLOBAL_BODY_T1.delta(T_GLOBAL_BODY_T2)
-                                T_GLOBAL_BODY = T_GLOBAL_BODY_T1 * SE3.Delta(vec_t1_t2 * i)
+                                T_GLOBAL_BODY = T_GLOBAL_BODY_T1.interp(T_GLOBAL_BODY_T2, i)
+
                                 pass
                             else:
                                 T_GLOBAL_BODY = hist_poses.get_at_t(timestamp)
