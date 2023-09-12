@@ -95,6 +95,7 @@ class AssociateRanges:
     matches_est_gt = None  # list of tuples containing [(idx_est, idx_gt), ...]
 
     cfg = AssociateRangesCfg()
+    data_loaded = False
 
     def __init__(self, fn_gt, fn_est, cfg):
         self.cfg = cfg
@@ -110,9 +111,16 @@ class AssociateRanges:
             self.csv_df_gt = (self.csv_df_gt.loc[self.csv_df_gt[cfg.label_ID1] == cfg.UWB_ID1])
             self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est[cfg.label_ID1] == cfg.UWB_ID1])
 
+            if len(self.csv_df_gt) == 0 or len(self.csv_df_est) == 0:
+                print("ID1=" + str(cfg.UWB_ID1) + " not found")
+                return
+
         if cfg.UWB_ID2 is not None:
             self.csv_df_gt = (self.csv_df_gt.loc[self.csv_df_gt[cfg.label_ID2] == cfg.UWB_ID2])
             self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est[cfg.label_ID2] == cfg.UWB_ID2])
+            if len(self.csv_df_gt) == 0 or len(self.csv_df_est) == 0:
+                print("ID2=" + str(cfg.UWB_ID2) + " not found")
+                return
 
         if cfg.remove_outliers:
             self.csv_df_est[cfg.label_range] = self.csv_df_est[cfg.label_range].where(
@@ -135,6 +143,11 @@ class AssociateRanges:
             t_vec_gt = self.csv_df_gt.as_matrix([cfg.label_timestamp])
             t_vec_est = self.csv_df_est.as_matrix([cfg.label_timestamp])
             t_zero = min(t_vec_gt[0], t_vec_est[0])
+
+            if len(t_vec_gt) == 0 or len(t_vec_est) == 0:
+                print("empty")
+                return
+
             if cfg.relative_timestamps:
                 self.csv_df_gt[[cfg.label_timestamp]] = self.csv_df_gt[[cfg.label_timestamp]] - t_zero
                 self.csv_df_est[[cfg.label_timestamp]] = self.csv_df_est[[cfg.label_timestamp]] - t_zero
@@ -143,6 +156,10 @@ class AssociateRanges:
             # from https://stackoverflow.com/questions/60164560/attributeerror-series-object-has-no-attribute-as-matrix-why-is-it-error
             t_vec_gt = self.csv_df_gt[[cfg.label_timestamp]].to_numpy()
             t_vec_est = self.csv_df_est[[cfg.label_timestamp]].to_numpy()
+            if len(t_vec_gt) == 0 or len(t_vec_est) == 0:
+                print("empty")
+                return
+
             t_zero = min(t_vec_gt[0], t_vec_est[0])
             if cfg.relative_timestamps:
                 self.csv_df_gt[[cfg.label_timestamp]] = self.csv_df_gt[[cfg.label_timestamp]] - t_zero
@@ -167,6 +184,7 @@ class AssociateRanges:
         if cfg.verbose:
             print("AssociateRanges(): {} timestamps associated.".format(len(idx_est)))
 
+        self.data_loaded = True
         # using zip() and * operator to
         # perform Unzipping
         # res = list(zip(*test_list))
@@ -175,6 +193,8 @@ class AssociateRanges:
                         colors=['r', 'g'], labels=['gt', 'est'],
                         ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
                         save_fn="", result_dir="."):
+        if not self.data_loaded:
+            return
         if fig is None:
             fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
         if ax is None:
@@ -214,6 +234,8 @@ class AssociateRanges:
                     colors=['r', 'g'], labels=['gt', 'est'],
                     ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
                     save_fn="", result_dir="."):
+        if not self.data_loaded:
+            return
         if fig is None:
             fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
         if ax is None:
@@ -259,6 +281,8 @@ class AssociateRanges:
         return fig, ax
 
     def compute_error(self, sort=False, remove_outlier=True, max_error=None):
+        if not self.data_loaded:
+            return
         if version_info[0] < 3:
             t_vec_gt = self.data_frame_gt_matched.as_matrix([self.cfg.label_timestamp])
             t_vec_est = self.data_frame_est_matched.as_matrix([self.cfg.label_timestamp])
@@ -320,6 +344,8 @@ class AssociateRanges:
                     colors=['r', 'g'], labels=['gt', 'est'],
                     ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
                     save_fn="", result_dir="."):
+        if not self.data_loaded:
+            return
         if fig is None:
             fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
         if ax is None:
@@ -349,6 +375,8 @@ class AssociateRanges:
 
     def plot_error_histogram(self, cfg_dpi=200, fig=None, ax=None,
                          save_fn="", result_dir=".", max_error=None):
+        if not self.data_loaded:
+            return
         if fig is None:
             fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
         if ax is None:
@@ -366,10 +394,12 @@ class AssociateRanges:
              np.exp(-0.5 * (1 / sigma * (bins - mu)) ** 2))
         ax.plot(bins, y, '--')
         ax.set_ylabel('Probability density')
-        ax.set_title(r'Histogram: $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+        ax.set_title(r'Histogram '+ str(self.cfg.UWB_ID1) + '-' + str(self.cfg.UWB_ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
         pass
 
     def save(self, result_dir=None, prefix=None):
+        if not self.data_loaded:
+            return
         if not result_dir:
             fn_est_ = str(os.path.splitext(self.csv_df_est.fn)[0]) + "_matched.csv"
             fn_gt_ = str(os.path.splitext(self.csv_df_gt.fn)[0]) + "_matched.csv"
