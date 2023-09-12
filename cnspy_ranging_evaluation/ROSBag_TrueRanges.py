@@ -361,6 +361,7 @@ class ROSbag2CSV:
                             cnt_T2T += 1
                             pass
 
+                        # write tag topic
                         if use_header_timestamp and hasattr(msg, "header"):
                             outbag.write(topic, msg, msg.header.stamp)
                         else:
@@ -430,7 +431,14 @@ class ROSbag2CSV:
                             idx += 1
                             cnt_A2T += 1
                             pass
+                        # write anchor topic
+                        if use_header_timestamp and hasattr(msg, "header"):
+                            outbag.write(topic, msg, msg.header.stamp)
+                        else:
+                            outbag.write(topic, msg, t)
+                        pass
                     else:
+                        # write other topic
                         if use_header_timestamp and hasattr(msg, "header"):
                             outbag.write(topic, msg, msg.header.stamp)
                         else:
