@@ -38,17 +38,17 @@ class RangeEvaluation:
     def __init__(self,
                  fn_gt,
                  fn_est,
-                 UWB_ID1=0, UWB_ID2_arr=[1],
+                 UWB_ID1_arr=[0], UWB_ID2_arr=[1],
                  result_dir=None,
                  prefix=None,
+                 save_plot=True,
+                 show_plot=True,
                  cfg = AssociateRangesCfg(),
-                 subsample=0,
-                 plot=False,
-                 save_plot=False,
-                 show_plot=False,
-                 max_difference=0.01,
-                 relative_timestamps=True,
-                 remove_outliers=False,
+                 plot_timestamps=True,
+                 plot_ranges=True,
+                 plot_ranges_sorted=True,
+                 plot_error =True,
+                 plot_histogram=True,
                  verbose=False):
         if not result_dir:
             result_dir = '.'
@@ -72,57 +72,107 @@ class RangeEvaluation:
         plt.rc('legend', fontsize=SMALL_SIZE)  # legend fontsize
         plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
-        fig_t = plt.figure(figsize=(20, 15), dpi=int(200))
-        fig_r = plt.figure(figsize=(20, 15), dpi=int(200))
-        fig_rs = plt.figure(figsize=(20, 15), dpi=int(200))
-        fig_e = plt.figure(figsize=(20, 15), dpi=int(200))
-        n_rows = len(UWB_ID2_arr)
-        idx = 1
-        for UWB_ID2 in UWB_ID2_arr:
-            cfg.UWB_ID1 = int(UWB_ID1)
-            cfg.UWB_ID2 = int(UWB_ID2)
-            cfg_title = str("ID" + str(UWB_ID1) + " to ID" + str(UWB_ID2))
-            assoc = AssociateRanges(fn_gt=fn_gt, fn_est=fn_est, cfg=cfg)
-            assoc.save(result_dir=result_dir, prefix=prefix+cfg_title)
+        for UWB_ID1 in UWB_ID1_arr:
+            if plot_timestamps:
+                fig_t = plt.figure(figsize=(20, 15), dpi=int(200))
+                fig_t.suptitle('Timestamps of ID=' + str(UWB_ID1), fontsize=16)
+            if plot_ranges:
+                fig_r = plt.figure(figsize=(20, 15), dpi=int(200))
+                fig_r.suptitle('Ranges of ID=' + str(UWB_ID1), fontsize=16)
+            if plot_ranges_sorted:
+                fig_rs = plt.figure(figsize=(20, 15), dpi=int(200))
+                fig_rs.suptitle('Range sorted of ID=' + str(UWB_ID1), fontsize=16)
+            if plot_error:
+                fig_e = plt.figure(figsize=(20, 15), dpi=int(200))
+                fig_e.suptitle('Error of ID=' + str(UWB_ID1), fontsize=16)
+            if plot_histogram:
+                fig_h = plt.figure(figsize=(20, 15), dpi=int(200))
+                fig_h.suptitle('Histograms of ID=' + str(UWB_ID1), fontsize=16)
 
-            ax_t = fig_t.add_subplot(n_rows, 1, idx)
-            ax_r = fig_r.add_subplot(n_rows, 1, idx)
-            ax_rs = fig_rs.add_subplot(n_rows, 1, idx)
-            ax_e = fig_e.add_subplot(n_rows, 2, (idx*2)-1)
-            assoc.plot_timestamps(fig=fig_t, ax=ax_t, calc_error=True, cfg_title=cfg_title)
-            assoc.plot_ranges(fig=fig_r, ax=ax_r, cfg_title=cfg_title)
-            assoc.plot_ranges(fig=fig_rs, ax=ax_rs, sorted=True, cfg_title=cfg_title)
-            [fig, ax, stat, r_vec_err] = assoc.plot_range_error(fig=fig_e, ax=ax_e, sorted=False, remove_outlier=True, cfg_title=cfg_title)
-            cnspy_numpy_utils.numpy_statistics.print_statistics(stat, desc=cfg_title + " error")
-            ax_e = fig_e.add_subplot(n_rows, 2, idx * 2)
-            # the histogram of the date
-            assoc.plot_error_histogram(fig=fig_e, ax=ax_e, max_error=1)
-            idx += 1
-        if verbose:
-            print("* RangeEvaluation(): ranges associated!")
+            n = len(UWB_ID2_arr)
+            sqrt_n = math.ceil(math.sqrt(n))
+            n_rows = sqrt_n
+            n_cols = sqrt_n
 
-        # Tweak spacing to prevent clipping of ylabel
-        fig_t.tight_layout()
-        fig_r.tight_layout()
-        fig_rs.tight_layout()
-        fig_e.tight_layout()
-        plt.show()
+            idx = 1
+            for UWB_ID2 in UWB_ID2_arr:
+                cfg.UWB_ID1 = int(UWB_ID1)
+                cfg.UWB_ID2 = int(UWB_ID2)
+                cfg_title = str("ID" + str(UWB_ID1) + " to ID" + str(UWB_ID2))
+                assoc = AssociateRanges(fn_gt=fn_gt, fn_est=fn_est, cfg=cfg)
+                assoc.save(result_dir=result_dir, prefix=prefix+cfg_title)
+
+                if plot_timestamps:
+                    ax_t = fig_t.add_subplot(n_rows, n_cols, idx)
+                    assoc.plot_timestamps(fig=fig_t, ax=ax_t, calc_error=True, cfg_title=cfg_title)
+
+                if plot_ranges:
+                    ax_r = fig_r.add_subplot(n_rows, n_cols, idx)
+                    assoc.plot_ranges(fig=fig_r, ax=ax_r, cfg_title=cfg_title)
+
+                if plot_ranges_sorted:
+                    ax_rs = fig_rs.add_subplot(n_rows, n_cols, idx)
+                    assoc.plot_ranges(fig=fig_rs, ax=ax_rs, sorted=True, cfg_title=cfg_title)
+                if plot_error:
+                    ax_e = fig_e.add_subplot(n_rows, n_cols, idx)
+                    [fig, ax, stat, r_vec_err] = assoc.plot_range_error(fig=fig_e, ax=ax_e, sorted=False, remove_outlier=True, cfg_title=cfg_title)
+                    cnspy_numpy_utils.numpy_statistics.print_statistics(stat, desc=cfg_title + " error")
+                if plot_histogram:
+                    ax_h = fig_rs.add_subplot(n_rows, n_cols, idx)
+                    assoc.plot_error_histogram(fig=fig_h, ax=ax_h, max_error=1)
+                # the histogram of the date
+                idx += 1
+            if verbose:
+                print("* RangeEvaluation(): ranges associated!")
+
+            # Tweak spacing to prevent clipping of ylabel
+            if plot_timestamps:
+                fig_t.tight_layout()
+                if save_plot:
+                    AssociateRanges.show_save_figure(fig=fig_t, result_dir=result_dir,
+                                                     save_fn=str("Timestamps" + str(UWB_ID1)), show=False)
+
+            if plot_ranges:
+               fig_r.tight_layout()
+               if save_plot:
+                   AssociateRanges.show_save_figure(fig=fig_r, result_dir=result_dir,
+                                                    save_fn=str("Ranges_ID" + str(UWB_ID1)), show=False)
+
+            if plot_ranges_sorted:
+                fig_rs.tight_layout()
+                if save_plot:
+                    AssociateRanges.show_save_figure(fig=fig_rs, result_dir=result_dir,
+                                                     save_fn=str("Range_Sorted_ID" + str(UWB_ID1)), show=False)
+
+            if plot_error:
+                fig_e.tight_layout()
+                if save_plot:
+                    AssociateRanges.show_save_figure(fig=fig_e, result_dir=result_dir,
+                                                     save_fn=str("Errors_ID" + str(UWB_ID1)), show=False)
+
+            if plot_histogram:
+                fig_h.tight_layout()
+                if save_plot:
+                    AssociateRanges.show_save_figure(fig=fig_h, result_dir=result_dir,
+                                                     save_fn=str("Histograms_ID" + str(UWB_ID1)), show=False)
+
+            plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='RangeEvaluation: evaluate and estimated trajectory against a true trajectory')
+        description='RangeEvaluation: evaluate and estimated and true pairwise ranges')
     parser.add_argument('--fn_gt', help='input ground-truth trajectory CSV file', default="not specified")
     parser.add_argument('--fn_est', help='input estimated  trajectory CSV file', default="not specified")
     parser.add_argument('--result_dir', help='directory to store results [otherwise bagfile name will be a directory]',
                         default='')
-    parser.add_argument('--UWB_ID1', help='ID of TX', default='0')
+    parser.add_argument('--UWB_ID1s', help='ID of TX', nargs='+', default=[0])
     parser.add_argument('--UWB_ID2s', help='ID of RX', nargs='+', default=[1])
     parser.add_argument('--prefix', help='prefix in results', default='')
     parser.add_argument('--max_timestamp_difference', help='Max difference between associated timestampes (t_gt - t_est)', default=0.03)
     parser.add_argument('--subsample', help='subsampling factor for input data (CSV)', default=0)
-    parser.add_argument('--plot', action='store_true', default=False)
-    parser.add_argument('--save_plot', action='store_true', default=False)
-    parser.add_argument('--show_plot', action='store_true', default=False)
+    parser.add_argument('--plot', action='store_true', default=True)
+    parser.add_argument('--save_plot', action='store_true', default=True)
+    parser.add_argument('--show_plot', action='store_true', default=True)
     parser.add_argument('--relative_timestamps', action='store_true', default=False)
     parser.add_argument('--remove_outliers', action='store_true', default=False)
     parser.add_argument('--verbose', action='store_true', default=False)
@@ -132,6 +182,11 @@ if __name__ == "__main__":
     parser.add_argument('--label_range', help='range label in CSV', default='range_raw')
     parser.add_argument('--label_ID1', help='ID1 label in CSV', default='UWB_ID1')
     parser.add_argument('--label_ID2', help='ID2 label in CSV', default='UWB_ID2')
+    parser.add_argument('--plot_timestamps', action='store_true', default=False)
+    parser.add_argument('--plot_ranges', action='store_true', default=False)
+    parser.add_argument('--plot_ranges_sorted', action='store_true', default=False)
+    parser.add_argument('--plot_errors', action='store_true', default=False)
+    parser.add_argument('--plot_histograms', action='store_true', default=False)
     tp_start = time.time()
     args = parser.parse_args()
     cfg = AssociateRangesCfg(UWB_ID1=None,
@@ -157,7 +212,13 @@ if __name__ == "__main__":
                             prefix=args.prefix,
                             plot=args.plot,
                             save_plot=args.save_plot,
-                            show_plot=args.show_plot,)
+                            show_plot=args.show_plot,
+                            plot_timestamps=args.plot_timestamps,
+                            plot_ranges=args.plot_ranges,
+                            plot_ranges_sorted=args.plot_ranges_sorted,
+                            plot_error=args.plot_errors,
+                            plot_histogram=args.plot_histograms,
+                            )
 
     print(" ")
     print("finished after [%s sec]\n" % str(time.time() - tp_start))
