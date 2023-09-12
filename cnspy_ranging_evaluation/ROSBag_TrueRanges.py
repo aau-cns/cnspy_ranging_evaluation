@@ -244,24 +244,29 @@ class ROSbag2CSV:
             print("ROSbag2CSV: extracting poses...")
             for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
                 if topic == topic_pose:
-                    T_GLOBAL_BODY = SE3()
+                    T_GLOBAL_BODY = None
                     if hasattr(msg, 'header') and hasattr(msg, 'pose'):  # POSE_STAMPED
                         t = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
                         q_GB = [msg.pose.orientation.w, msg.pose.orientation.x, msg.pose.orientation.y,
                                 msg.pose.orientation.z]
-                        T_GLOBAL_BODY = SE3.Rt(Quaternion(q_GB).unit().R, t, check=False)
+
+                        q = UnitQuaternion(q_GB, norm=True)
+                        T_GLOBAL_BODY = SE3.Rt(q.R, t, check=True)
                         pass
                     elif hasattr(msg, 'header') and hasattr(msg, 'transform'):
                         t = np.array(
                             [msg.transform.translation.x, msg.transform.translation.y, msg.transform.translation.z])
                         q_GB = [msg.transform.rotation.w, msg.transform.rotation.x, msg.transform.rotation.y,
                                 msg.transform.rotation.z]
-                        T_GLOBAL_BODY = SE3.Rt(Quaternion(q_GB).unit().R, t, check=False)
+                        q = UnitQuaternion(q_GB, norm=True)
+                        T_GLOBAL_BODY = SE3.Rt(q.R, t, check=True)
                     else:
                         print("\nROSbag2CSV: unsupported message " + str(msg))
                         continue
-                    timestamp = round(msg.header.stamp.to_sec(), round_decimals)
-                    dict_poses[timestamp] = T_GLOBAL_BODY
+
+                    if T_GLOBAL_BODY is not None:
+                        timestamp = round(msg.header.stamp.to_sec(), round_decimals)
+                        dict_poses[timestamp] = T_GLOBAL_BODY
                 pass
         except AssertionError as error:
             print(error)
@@ -289,9 +294,14 @@ class ROSbag2CSV:
                         assert (int(TAG_ID1) == int(msg.UWB_ID1)), text
 
                         t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
-                        T_BODY_TAG1 = SE3(np.array(t_bt1))
+                        T_BODY_TAG1 = SE3()
+                        T_BODY_TAG1.t = (np.array(t_bt1))
+
+                        T_GLOBAL_BODY = None
                         timestamp = round(msg.header.stamp.to_sec(), round_decimals)
+                        interpol = False
                         if hist_poses.exists_at_t(timestamp) is None:
+                            interpol = True
                             # interpolate between poses
                             [t1, T_GLOBAL_BODY_T1] = hist_poses.get_before_t(timestamp)
                             [t2, T_GLOBAL_BODY_T2] = hist_poses.get_after_t(timestamp)
@@ -306,9 +316,23 @@ class ROSbag2CSV:
                             i = dt_i / dt
 
                             # interpolate between poses:
-                            T_GLOBAL_BODY = T_GLOBAL_BODY_T1.interp(T_GLOBAL_BODY_T2, i)
+                            T_GLOBAL_BODY = T_GLOBAL_BODY_T1.interp(T_GLOBAL_BODY_T2, abs(i))
+                            if not SE3.isvalid(T_GLOBAL_BODY, check=True):
+                                if  T_GLOBAL_BODY.A is None:
+                                    if verbose:
+                                        print("* interp failed: skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                    continue
+                                else :
+                                    q = UnitQuaternion(SO3(T_GLOBAL_BODY.R, check=False), norm=True).unit()
+                                    T_GLOBAL_BODY = SE3.Rt(q.R, T_GLOBAL_BODY.t, check=True)
+
                         else:
                             T_GLOBAL_BODY = hist_poses.get_at_t(timestamp)
+
+                        if T_GLOBAL_BODY is None:
+                            if verbose:
+                                print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                            continue
 
                         T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
 
@@ -365,7 +389,8 @@ class ROSbag2CSV:
                         elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
                             TAG_ID1 = msg.UWB_ID2
                             t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
-                            T_BODY_TAG1 = SE3(np.array(t_bt1))
+                            T_BODY_TAG1 = SE3()
+                            T_BODY_TAG1.t = (np.array(t_bt1))
                             timestamp = round(msg.header.stamp.to_sec(), round_decimals)
                             if hist_poses.exists_at_t(timestamp) is None:
                                 # interpolate between poses
@@ -379,11 +404,19 @@ class ROSbag2CSV:
 
                                 dt = t2 - t1
                                 dt_i = timestamp - t1
-                                i = dt_i / dt
+                                i = abs(dt_i / dt)
 
                                 # interpolate between poses:
                                 T_GLOBAL_BODY = T_GLOBAL_BODY_T1.interp(T_GLOBAL_BODY_T2, i)
-
+                                if not SE3.isvalid(T_GLOBAL_BODY, check=True):
+                                    if T_GLOBAL_BODY.A is None:
+                                        if verbose:
+                                            print("* interp failed: skip measurement from topic=" + topic + "at t=" + str(
+                                                    timestamp))
+                                        continue
+                                    else:
+                                        q = UnitQuaternion(SO3(T_GLOBAL_BODY.R, check=False), norm=True).unit()
+                                        T_GLOBAL_BODY = SE3.Rt(q.R, T_GLOBAL_BODY.t, check=True)
                                 pass
                             else:
                                 T_GLOBAL_BODY = hist_poses.get_at_t(timestamp)
