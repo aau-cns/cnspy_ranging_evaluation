@@ -277,7 +277,7 @@ class StaticBiasAnalysis:
 if __name__ == "__main__":
     # example: ROSBag_Pose2Ranges.py --bagfile ../test/sample_data//uwb_calib_a01_2023-08-31-21-05-46.bag --topic /d01/mavros/vision_pose/pose --cfg ../test/sample_data/config.yaml --verbose
     parser = argparse.ArgumentParser(
-        description='ROSBag_TrueRanges: extract a given pose topic and compute ranges to N abs_anchor_positions and M rel_tag_positions, which is stored into a CSV file')
+        description='CSV_StaticBiasAnalysis: extract a given pose topic and compute ranges to N abs_anchor_positions and M rel_tag_positions, which is stored into a CSV file')
     parser.add_argument('--csv_fn', help='input bag file', required=True)
     parser.add_argument('--cfg_fn',
                         help='YAML configuration file describing the setup: {tag_postions, anchor_positions, tag_topics}',

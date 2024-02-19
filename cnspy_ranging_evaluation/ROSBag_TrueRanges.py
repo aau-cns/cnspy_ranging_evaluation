@@ -320,7 +320,7 @@ class ROSbag2CSV:
                             if not SE3.isvalid(T_GLOBAL_BODY, check=True):
                                 if  T_GLOBAL_BODY.A is None:
                                     if verbose:
-                                        print("* interp failed: skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                        print("* interp failed: skip measurement from topic=" + topic + " at t=" + str(timestamp))
                                     continue
                                 else :
                                     q = UnitQuaternion(SO3(T_GLOBAL_BODY.R, check=False), norm=True).unit()
@@ -400,7 +400,7 @@ class ROSbag2CSV:
 
                                 if t1 is None or t2 is None:
                                     if verbose:
-                                        print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                        print("* skip measurement from topic=" + topic + " at t=" + str(timestamp))
                                     continue
 
                                 dt = t2 - t1
@@ -412,7 +412,7 @@ class ROSbag2CSV:
                                 if not SE3.isvalid(T_GLOBAL_BODY, check=True):
                                     if T_GLOBAL_BODY.A is None:
                                         if verbose:
-                                            print("* interp failed: skip measurement from topic=" + topic + "at t=" + str(
+                                            print("* interp failed: skip measurement from topic=" + topic + " at t=" + str(
                                                     timestamp))
                                         continue
                                     else:
