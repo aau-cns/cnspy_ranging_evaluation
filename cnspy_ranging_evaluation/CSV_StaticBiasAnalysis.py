@@ -280,7 +280,7 @@ if __name__ == "__main__":
         description='CSV_StaticBiasAnalysis: extract a given pose topic and compute ranges to N abs_anchor_positions and M rel_tag_positions, which is stored into a CSV file')
     parser.add_argument('--csv_fn', help='input bag file', required=True)
     parser.add_argument('--cfg_fn',
-                        help='YAML configuration file describing the setup: {tag_postions, anchor_positions, tag_topics}',
+                        help='YAML configuration file describing the setup: {abs_anchor_positions}',
                         default="config.yaml", required=True)
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--label_timestamp', help='timestamp label in CSV', default='t')

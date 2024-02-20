@@ -243,7 +243,7 @@ if __name__ == "__main__":
         description='ROSBag_Pose2Ranges: extract a given pose topic and compute ranges to N abs_anchor_positions and M rel_tag_positions, which is stored into a CSV file')
     parser.add_argument('--bagfile', help='input bag file', required=True)
     parser.add_argument('--topic', help='desired topic', required=True)
-    parser.add_argument('--cfg', help='YAML configuration file describing the setup', default="config.yaml", required=True)
+    parser.add_argument('--cfg', help='YAML configuration file describing the setup: {rel_tag_positions, abs_anchor_positions}', default="config.yaml", required=True)
     parser.add_argument('--filename', help='csv filename of corresponding topic', default="")
     parser.add_argument('--result_dir', help='directory to store results [otherwise bagfile name will be a directory]',
                         default='')

@@ -467,7 +467,7 @@ if __name__ == "__main__":
     parser.add_argument('--bagfile_out', help='output bag file', default="")
     parser.add_argument('--topic_pose', help='desired topic', required=True)
     parser.add_argument('--cfg',
-                        help='YAML configuration file describing the setup: {tag_postions, anchor_positions, tag_topics}',
+                        help='YAML configuration file describing the setup: {rel_tag_positions, abs_anchor_positions}',
                         default="config.yaml", required=True)
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--std_range',

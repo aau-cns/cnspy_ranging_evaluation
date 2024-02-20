@@ -29,7 +29,7 @@ import numpy as np
 
 import cnspy_numpy_utils.numpy_statistics
 from cnspy_timestamp_association.TimestampAssociation import TimestampAssociation
-from pkgs.f_ranging_evaluation.cnspy_ranging_evaluation.AssociateRanges import AssociateRanges, AssociateRangesCfg
+from AssociateRanges import AssociateRanges, AssociateRangesCfg
 from matplotlib import pyplot as plt
 
 class RangeEvaluation:
