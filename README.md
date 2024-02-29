@@ -3,6 +3,16 @@
 A Python package to evaluate the two-way-ranging measurements between UWB modules in order to assess the accuracy.
 The baseline (ground truth) ranges can be computed from a recorded 3D trajectory of the moving ranging devices (tags) and known positions of stationary devices (anchors). 
 
+The following evaluations can be conducted:
+
+| Describtion    | Images |
+|:---------:|:---:|
+| True range vs. measured range | ![](./doc/Ranges_0to1_over_t.png) |
+| Range error w.o outliers      | ![](./doc/RangeError_0to1.png) |
+| Histogram (filtered) and distribution | ![](./doc/Histogram_0to1.png) |
+| Statistics | [statistics.yaml](./doc/statistics.yaml) |
+
+
 ## Installation
 
 Python 3.6 or greater is required. Inside this repo's directory, you may run
