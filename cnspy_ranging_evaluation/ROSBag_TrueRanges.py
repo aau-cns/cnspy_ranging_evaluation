@@ -242,6 +242,7 @@ class ROSbag2CSV:
         ## extract the desired topics from the BAG file
         try:  # else already exists
             print("ROSbag2CSV: extracting poses...")
+            cnt_poses = 0
             for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
                 if topic == topic_pose:
                     T_GLOBAL_BODY = None
@@ -267,7 +268,16 @@ class ROSbag2CSV:
                     if T_GLOBAL_BODY is not None:
                         timestamp = round(msg.header.stamp.to_sec(), round_decimals)
                         dict_poses[timestamp] = T_GLOBAL_BODY
+                        cnt_poses = cnt_poses + 1
+                        pass
                 pass
+
+            if cnt_poses == 0:
+                print("\nROSbag2CSV: no poses obtained!")
+                return False
+            else:
+                print("\nROSbag2CSV: poses extractd: " + str(cnt_poses))
+
         except AssertionError as error:
             print(error)
             print("ROSbag2CSV: Unexpected error while reading the bag file!\n * try: $ rosbag fix <bagfile> <fixed>")
@@ -308,7 +318,7 @@ class ROSbag2CSV:
 
                             if t1 is None or t2 is None:
                                 if verbose:
-                                    print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                    print("* NO POSE: skip measurement from topic=" + topic + " at t=" + str(timestamp))
                                 continue
 
                             dt = t2 - t1
