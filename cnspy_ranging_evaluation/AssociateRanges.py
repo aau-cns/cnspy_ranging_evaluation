@@ -228,6 +228,7 @@ class AssociateRanges:
 
         AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
 
+        ax.legend()
         return fig, ax
 
     def plot_ranges(self, cfg_dpi=200, cfg_title="ranges", sorted=False, fig=None, ax=None,
@@ -278,6 +279,7 @@ class AssociateRanges:
             ax.set_xlabel('range sorted index')
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
 
+        ax.legend()
         return fig, ax
 
     def compute_error(self, sort=False, remove_outlier=True, max_error=None):
@@ -341,7 +343,7 @@ class AssociateRanges:
             return [t_vec, r_vec]
 
     def plot_range_error(self, cfg_dpi=200, cfg_title="ranges", sorted=False, remove_outlier=True, fig=None, ax=None,
-                    colors=['r', 'g'], labels=['gt', 'est'],
+                    colors=['r'], labels=['error'],
                     ls_vec=[PlotLineStyle(linestyle='-'), PlotLineStyle(linestyle='-.')],
                     save_fn="", result_dir="."):
         if not self.data_loaded:
@@ -370,6 +372,7 @@ class AssociateRanges:
             ax.set_xlabel('range sorted index')
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
 
+        ax.legend()
         stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_vec_err)))
         return fig, ax, stat, r_vec_err
 
@@ -399,7 +402,7 @@ class AssociateRanges:
             ax.set_ylabel('num. samples normalized')
             ax.set_xlabel('error [m]')
             ax.set_title(r'Histogram '+ str(self.cfg.UWB_ID1) + '-' + str(self.cfg.UWB_ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
-
+            ax.legend()
             return fig, ax, stat, r_vec_err
         else:
             idx_n_sorted = np.argsort(n)
