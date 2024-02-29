@@ -303,11 +303,19 @@ if __name__ == "__main__":
             fn = ""
             if len(args.filenames) :
               fn  = args.filenames[0]
-            res = TWR_ROSbag2CSV.extract_to_one(bagfile_name=args.bagfile, topic_list=args.topics, fn=fn, result_dir=args.result_dir, verbose=args.verbose)
+            res = TWR_ROSbag2CSV.extract_to_one(bagfile_name=args.bagfile,
+                                                topic_list=args.topics,
+                                                fn=fn,
+                                                result_dir=args.result_dir,
+                                                verbose=args.verbose)
         else:
             print("\nTWR_ROSbag2CS.extract()")
 
-            res = TWR_ROSbag2CSV.extract(bagfile_name=args.bagfile, topic_list=args.topics, fn_list=args.filenames, result_dir=args.result_dir, verbose=args.verbose)
+            res = TWR_ROSbag2CSV.extract(bagfile_name=args.bagfile,
+                                         topic_list=args.topics,
+                                         fn_list=args.filenames,
+                                         result_dir=args.result_dir,
+                                         verbose=args.verbose)
 
     if res:
         print(" ")

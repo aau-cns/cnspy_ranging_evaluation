@@ -21,9 +21,11 @@
 ########################################################################################################################
 import os
 from sys import version_info
+from datetime import datetime
 import argparse
 import time
 import math
+import yaml
 import pandas as pandas
 import numpy as np
 
@@ -42,6 +44,7 @@ class RangeEvaluation:
                  result_dir=None,
                  prefix=None,
                  save_plot=True,
+                 save_statistics=True,
                  show_plot=True,
                  cfg = AssociateRangesCfg(),
                  plot_timestamps=True,
@@ -49,12 +52,32 @@ class RangeEvaluation:
                  plot_ranges_sorted=True,
                  plot_error =True,
                  plot_histogram=True,
-                 verbose=False):
+                 verbose=False,
+                 filter_histogram=True):
         if not result_dir:
             result_dir = '.'
         if not prefix:
             prefix = ''
 
+        statistics_file = None
+        if save_statistics and not plot_histogram:
+            print("RangeEvaluation: Warning save_statistics can only be used in combination with plot_histogram")
+            plot_histogram = True
+        if save_statistics:
+            if not os.path.exists(result_dir):
+                os.makedirs(result_dir)
+            stat_fn = os.path.join(result_dir, 'statistics.yaml')
+            statistics_file = open(stat_fn, 'w')
+            if verbose:
+                print("RangeEvaluation: stat_fn=" + stat_fn)
+            yaml.dump({'info': 'RangeEvaluation Statistics',
+                       'time': datetime.now().strftime("%m/%d/%Y, %H:%M:%S"),
+                       'fn_gt': fn_gt,
+                       'fn_est': fn_est,
+                       'filter_histogram': filter_histogram,
+                       'result_dir': result_dir}, statistics_file, sort_keys=False, explicit_start=False, default_flow_style=False)
+            yaml.dump({'UWB_ID1s': UWB_ID1_arr,
+                       'UWB_ID2s': UWB_ID2_arr}, statistics_file, sort_keys=False, explicit_start=False, default_flow_style=True)
         fn_gt = os.path.abspath(fn_gt)
         fn_est = os.path.abspath(fn_est)
 
@@ -88,6 +111,9 @@ class RangeEvaluation:
             if plot_histogram:
                 fig_h = plt.figure(figsize=(20, 15), dpi=int(200))
                 fig_h.suptitle('Histograms of ID=' + str(UWB_ID1), fontsize=16)
+            if save_statistics:
+                dict_statistics_i = {'ID' : UWB_ID1, 'contant_bias_table' : dict(), 'noise_table' : dict()}
+                pass
 
             n = len(UWB_ID2_arr)
             sqrt_n = math.floor(math.sqrt(n))
@@ -128,10 +154,13 @@ class RangeEvaluation:
                     cnspy_numpy_utils.numpy_statistics.print_statistics(stat, desc=cfg_title + " error")
                 if plot_histogram:
                     ax_h = fig_h.add_subplot(n_rows, n_cols, idx)
-                    assoc.plot_error_histogram(fig=fig_h,
-                                               ax=ax_h,
-                                               max_error=1,
-                                               filter_histogramm=True)
+                    [fig_, ax_, stat, r_vec_err_] = assoc.plot_error_histogram(fig=fig_h,
+                                                                                ax=ax_h,
+                                                                                max_error=1,
+                                                                                filter_histogramm=filter_histogram)
+                    dict_statistics_i['contant_bias_table'][UWB_ID2] = round(float(stat['mean']),2)
+                    dict_statistics_i['noise_table'][UWB_ID2] = round(float(stat['std']),2)
+
                 # the histogram of the date
                 idx += 1
             if verbose:
@@ -170,6 +199,18 @@ class RangeEvaluation:
             if show_plot:
                 plt.show()
 
+            if save_statistics:
+                yaml.dump(dict_statistics_i, statistics_file,explicit_start=True, default_flow_style=True)
+                if verbose:
+                    print(yaml.dump(dict_statistics_i,explicit_start=True, default_flow_style=True))
+            pass # UWB_ID2
+        pass # UWB_ID1
+
+        if save_statistics:
+            statistics_file.close()
+
+        pass # DONE
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='RangeEvaluation: evaluate and estimated and true pairwise ranges')
@@ -184,6 +225,7 @@ if __name__ == "__main__":
     parser.add_argument('--subsample', help='subsampling factor for input data (CSV)', default=0)
     parser.add_argument('--plot', action='store_true', default=True)
     parser.add_argument('--save_plot', action='store_true', default=True)
+    parser.add_argument('--save_statistics', action='store_true', default=True)
     parser.add_argument('--show_plot', action='store_true', default=True)
     parser.add_argument('--relative_timestamps', action='store_true', default=False)
     parser.add_argument('--remove_outliers', action='store_true', default=False)
@@ -224,6 +266,7 @@ if __name__ == "__main__":
                             prefix=args.prefix,
                             save_plot=args.save_plot,
                             show_plot=args.show_plot,
+                            save_statistics=args.save_statistics,
                             plot_timestamps=args.plot_timestamps,
                             plot_ranges=args.plot_ranges,
                             plot_ranges_sorted=args.plot_ranges_sorted,

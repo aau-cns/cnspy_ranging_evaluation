@@ -399,6 +399,8 @@ class AssociateRanges:
             ax.set_ylabel('num. samples normalized')
             ax.set_xlabel('error [m]')
             ax.set_title(r'Histogram '+ str(self.cfg.UWB_ID1) + '-' + str(self.cfg.UWB_ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+
+            return fig, ax, stat, r_vec_err
         else:
             idx_n_sorted = np.argsort(n)
 
@@ -433,6 +435,7 @@ class AssociateRanges:
             ax.set_xlabel('error [m]')
             ax.set_title(r'Histogram (filtered) '+ str(self.cfg.UWB_ID1) + '-' + str(self.cfg.UWB_ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
             ax.legend()
+            return fig, ax, stat, r_filtered_err
         pass
 
     def save(self, result_dir=None, prefix=None):
@@ -522,9 +525,9 @@ class AssociateRanges:
     @staticmethod
     def show_save_figure(fig, save_fn="", result_dir=".", dpi=200, show=True, close_figure=False):
         assert (isinstance(fig, plt.Figure))
-        plt.pause(0.01)
+        plt.pause(0.1)
         plt.draw()
-        plt.pause(0.01)
+        plt.pause(0.1)
         if save_fn:
             if not os.path.exists(result_dir):
                 os.makedirs(result_dir)
