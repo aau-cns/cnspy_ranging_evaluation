@@ -30,7 +30,7 @@ from tqdm import tqdm
 from std_msgs.msg import Header, Time
 #from uwb_msgs.msg import TwoWayRangeStamped
 
-class ROSbag2CSV:
+class IMU_ROSbag2CSV:
     def __init__(self):
         pass
 
@@ -41,20 +41,20 @@ class ROSbag2CSV:
     def extract(bagfile_name, topic_list, result_dir="", fn_list=[], verbose=False
                 ):
         if not os.path.isfile(bagfile_name):
-            print("ROSbag2CSV: could not find file: %s" % bagfile_name)
+            print("IMU_ROSbag2CSV: could not find file: %s" % bagfile_name)
             return False
 
         if len(topic_list) < 1:
-            print("ROSbag2CSV: no topics specified!")
+            print("IMU_ROSbag2CSV: no topics specified!")
             return False
 
         if fn_list:
             if len(topic_list) != len(fn_list):
-                print("ROSbag2CSV: topic_list and fn_list must have the same length!")
+                print("IMU_ROSbag2CSV: topic_list and fn_list must have the same length!")
                 return False
 
         if verbose:
-            print("ROSbag2CSV:")
+            print("IMU_ROSbag2CSV:")
             print("* bagfile name: " + str(bagfile_name))
             print("* topic_list: \t " + str(topic_list))
             print("* filename_list: " + str(fn_list))
@@ -64,7 +64,7 @@ class ROSbag2CSV:
             bag = rosbag.Bag(bagfile_name)
         except:
             if verbose:
-                print("ROSbag2CSV: Unexpected error!")
+                print("IMU_ROSbag2CSV: Unexpected error!")
 
             return False
 
@@ -72,7 +72,7 @@ class ROSbag2CSV:
 
         if info_dict is None or 'messages' not in info_dict:
             if verbose:
-                print("ROSbag2CSV: Unexpected error, bag file might be empty!")
+                print("IMU_ROSbag2CSV: Unexpected error, bag file might be empty!")
             bag.close()
             return False
 
@@ -99,7 +99,7 @@ class ROSbag2CSV:
         for topicName in topic_list:
 
             if topicName[0] != '/':
-                print("ROSbag2CSV: Not a proper topic name: %s (should start with /)" % topicName)
+                print("IMU_ROSbag2CSV: Not a proper topic name: %s (should start with /)" % topicName)
                 continue
 
             if not fn_list:
@@ -120,7 +120,7 @@ class ROSbag2CSV:
             dict_csvfile_hdls[topicName] = csvfile
 
             if verbose:
-                print("ROSbag2CSV: creating csv file: %s " % filename)
+                print("IMU_ROSbag2CSV: creating csv file: %s " % filename)
 
             idx = idx + 1
 
@@ -137,7 +137,7 @@ class ROSbag2CSV:
                 print("# WARNING: desired topic [" + str(topicName) + "] is not in bag file!")
 
         if verbose:
-            print("\nROSbag2CSV: num messages " + str(num_messages))
+            print("IMU_ROSbag2CSV: num messages " + str(num_messages))
 
         ## extract the desired topics from the BAG file
         for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
@@ -163,7 +163,7 @@ class ROSbag2CSV:
         # check if a topic was found by checking if the topic header was written
         for topicName in topic_list:
             if not dict_header_written[topicName]:
-                print("\nROSbag2CSV: \n\tWARNING topic [" + str(topicName) + "] was not in bag-file")
+                print("\nIMU_ROSbag2CSV: \n\tWARNING topic [" + str(topicName) + "] was not in bag-file")
                 print("\tbag file [" + str(bagfile_name) + "] contains: ")
                 # print(info_dict['topics'])
                 for t in info_dict['topics']:
@@ -171,7 +171,7 @@ class ROSbag2CSV:
                 return False
 
         if verbose:
-            print("\nROSbag2CSV: extracting done! ")
+            print("\nIMU_ROSbag2CSV: extracting done! ")
 
         bag.close()
         return True
@@ -191,9 +191,9 @@ if __name__ == "__main__":
     tp_start = time.time()
     args = parser.parse_args()
 
-    res = False;
+    res = False
     if args.topics is not None and args.filenames is not None:
-        res = ROSbag2CSV.extract(bagfile_name=args.bagfile, topic_list=args.topics, fn_list=args.filenames, result_dir=args.result_dir, verbose=args.verbose)
+        res = IMU_ROSbag2CSV.extract(bagfile_name=args.bagfile, topic_list=args.topics, fn_list=args.filenames, result_dir=args.result_dir, verbose=args.verbose)
 
     if res:
         print(" ")

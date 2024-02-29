@@ -126,7 +126,7 @@ class HistoryBuffer:
         pass
 
 
-class ROSbag2CSV:
+class ROSbag_TrueRanges:
     def __init__(self):
         pass
 
@@ -138,20 +138,20 @@ class ROSbag2CSV:
                 std_range=0.1,
                 bias_offset=0,
                 bias_range=1,
-                use_header_timestamp = False,
+                use_header_timestamp=False,
                 verbose=False):
         if not os.path.isfile(bagfile_in_name):
-            print("ROSbag2CSV: could not find file: %s" % bagfile_in_name)
+            print("ROSbag_TrueRanges: could not find file: %s" % bagfile_in_name)
             return False
         cfg = os.path.abspath(cfg)
         if not os.path.isfile(cfg):
-            print("ROSbag2CSV: could not find file: %s" % cfg)
+            print("ROSbag_TrueRanges: could not find file: %s" % cfg)
             return False
 
         bagfile_out_name = os.path.abspath(bagfile_out_name)
 
         if verbose:
-            print("ROSbag2CSV:")
+            print("ROSbag_TrueRanges:")
             print("* bagfile in name: " + str(bagfile_in_name))
             print("* bagfile out name: " + str(bagfile_out_name))
             print("* topic: \t " + str(topic_pose))
@@ -165,7 +165,7 @@ class ROSbag2CSV:
             bag = rosbag.Bag(bagfile_in_name)
         except:
             if verbose:
-                print("ROSbag2CSV: Unexpected error!")
+                print("ROSbag_TrueRanges: Unexpected error!")
 
             return False
 
@@ -198,13 +198,13 @@ class ROSbag2CSV:
 
         if info_dict is None or 'messages' not in info_dict:
             if verbose:
-                print("ROSbag2CSV: Unexpected error, bag file might be empty!")
+                print("ROSbag_TrueRanges: Unexpected error, bag file might be empty!")
             bag.close()
             return False
 
         ## create csv file according to the topic names:
         if topic_pose[0] != '/':
-            print("ROSbag2CSV: Not a proper topic name: %s (should start with /)" % topic_pose)
+            print("ROSbag_TrueRanges: Not a proper topic name: %s (should start with /)" % topic_pose)
             return False
 
         ## check if desired pose topic is  in the bag file:
@@ -235,13 +235,13 @@ class ROSbag2CSV:
                 print("# WARNING: desired topic [" + str(val) + "] is not in bag file!")
 
         if verbose:
-            print("\nROSbag2CSV: num messages " + str(num_messages))
+            print("\nROSbag_TrueRanges: num messages " + str(num_messages))
 
         dict_poses = dict()
         round_decimals = 6
         ## extract the desired topics from the BAG file
         try:  # else already exists
-            print("ROSbag2CSV: extracting poses...")
+            print("ROSbag_TrueRanges: extracting poses...")
             cnt_poses = 0
             for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
                 if topic == topic_pose:
@@ -262,7 +262,7 @@ class ROSbag2CSV:
                         q = UnitQuaternion(q_GB, norm=True)
                         T_GLOBAL_BODY = SE3.Rt(q.R, t, check=True)
                     else:
-                        print("\nROSbag2CSV: unsupported message " + str(msg))
+                        print("\nROSbag_TrueRanges: unsupported message " + str(msg))
                         continue
 
                     if T_GLOBAL_BODY is not None:
@@ -273,14 +273,15 @@ class ROSbag2CSV:
                 pass
 
             if cnt_poses == 0:
-                print("\nROSbag2CSV: no poses obtained!")
+                print("\nROSbag_TrueRanges: no poses obtained!")
                 return False
             else:
-                print("\nROSbag2CSV: poses extractd: " + str(cnt_poses))
+                print("\nROSbag_TrueRanges: poses extractd: " + str(cnt_poses))
 
         except AssertionError as error:
             print(error)
-            print("ROSbag2CSV: Unexpected error while reading the bag file!\n * try: $ rosbag fix <bagfile> <fixed>")
+            print(
+                "ROSbag_TrueRanges: Unexpected error while reading the bag file!\n * try: $ rosbag fix <bagfile> <fixed>")
             return False
 
         hist_poses = HistoryBuffer(dict_t=dict_poses)
@@ -294,7 +295,7 @@ class ROSbag2CSV:
         cnt_T2T = 0
         ## extract the desired topics from the BAG file
         try:  # else already exists
-            print("ROSbag2CSV: computing new range measurements...")
+            print("ROSbag_TrueRanges: computing new range measurements...")
             with rosbag.Bag(bagfile_out_name, 'w') as outbag:
                 for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
                     if topic in dict_cfg["tag_topics"].values():
@@ -328,11 +329,12 @@ class ROSbag2CSV:
                             # interpolate between poses:
                             T_GLOBAL_BODY = T_GLOBAL_BODY_T1.interp(T_GLOBAL_BODY_T2, abs(i))
                             if not SE3.isvalid(T_GLOBAL_BODY, check=True):
-                                if  T_GLOBAL_BODY.A is None:
+                                if T_GLOBAL_BODY.A is None:
                                     if verbose:
-                                        print("* interp failed: skip measurement from topic=" + topic + " at t=" + str(timestamp))
+                                        print("* interp failed: skip measurement from topic=" + topic + " at t=" + str(
+                                            timestamp))
                                     continue
-                                else :
+                                else:
                                     q = UnitQuaternion(SO3(T_GLOBAL_BODY.R, check=False), norm=True).unit()
                                     T_GLOBAL_BODY = SE3.Rt(q.R, T_GLOBAL_BODY.t, check=True)
 
@@ -353,7 +355,7 @@ class ROSbag2CSV:
                             d_TA = LA.norm(t_TA)
                             msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
                             msg.range_corr = d_TA
-                            msg.R = std_range*std_range
+                            msg.R = std_range * std_range
                             idx += 1
                             cnt_T2A += 1
                             pass
@@ -392,7 +394,7 @@ class ROSbag2CSV:
                             d_TA = LA.norm(t_GA1 - t_GA2)
                             msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
                             msg.range_corr = d_TA
-                            msg.R = std_range*std_range
+                            msg.R = std_range * std_range
                             idx += 1
                             cnt_A2A += 1
                             pass
@@ -422,7 +424,8 @@ class ROSbag2CSV:
                                 if not SE3.isvalid(T_GLOBAL_BODY, check=True):
                                     if T_GLOBAL_BODY.A is None:
                                         if verbose:
-                                            print("* interp failed: skip measurement from topic=" + topic + " at t=" + str(
+                                            print(
+                                                "* interp failed: skip measurement from topic=" + topic + " at t=" + str(
                                                     timestamp))
                                         continue
                                     else:
@@ -437,7 +440,7 @@ class ROSbag2CSV:
                             d_TA = LA.norm(t_TA)
                             msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
                             msg.range_corr = d_TA
-                            msg.R = std_range*std_range
+                            msg.R = std_range * std_range
                             idx += 1
                             cnt_A2T += 1
                             pass
@@ -456,11 +459,11 @@ class ROSbag2CSV:
                     pass
         except AssertionError as error:
             print(error)
-            print("ROSbag2CSV: Unexpected error while creating bag file")
+            print("ROSbag_TrueRanges: Unexpected error while creating bag file")
             return False
 
         if verbose:
-            print("\nROSbag2CSV: " + str(idx) + " range measurements modified!")
+            print("\nROSbag_TrueRanges: " + str(idx) + " range measurements modified!")
             print("* num. T2T = " + str(cnt_T2T))
             print("* num. T2A = " + str(cnt_T2A))
             print("* num. A2A = " + str(cnt_A2A))
@@ -492,13 +495,14 @@ if __name__ == "__main__":
     tp_start = time.time()
     args = parser.parse_args()
 
-    if ROSbag2CSV.extract(bagfile_in_name=args.bagfile_in,
-                          bagfile_out_name=args.bagfile_out,
-                          topic_pose=str(args.topic_pose), cfg=args.cfg,
-                          verbose=args.verbose, std_range=float(args.std_range),
-                          bias_offset=float(args.bias_offset),
-                          bias_range=float(args.bias_range),
-                          use_header_timestamp=args.use_header_timestamp):
+    if ROSbag_TrueRanges.extract(bagfile_in_name=args.bagfile_in,
+                                 bagfile_out_name=args.bagfile_out,
+                                 topic_pose=str(args.topic_pose),
+                                 cfg=args.cfg,
+                                 verbose=args.verbose, std_range=float(args.std_range),
+                                 bias_offset=float(args.bias_offset),
+                                 bias_range=float(args.bias_range),
+                                 use_header_timestamp=args.use_header_timestamp):
         print(" ")
         print("finished after [%s sec]\n" % str(time.time() - tp_start))
     else:

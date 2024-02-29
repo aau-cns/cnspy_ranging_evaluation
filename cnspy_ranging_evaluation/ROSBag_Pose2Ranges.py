@@ -33,7 +33,7 @@ from spatialmath import UnitQuaternion, SO3, SE3, Quaternion, base
 from std_msgs.msg import Header, Time
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TransformStamped
 
-class ROSbag2CSV:
+class ROSbag_Pose2Ranges:
     def __init__(self):
         pass
 
@@ -50,7 +50,7 @@ class ROSbag2CSV:
         >> args.verbose = True
         >> args.result_dir = "./results"
         >> args.filenames = ["mav_PoseWithCov.csv", "sensor_PoseWithCov"]
-        >> ROSbag2CSV.extract(bagfile_name=args.bagfile, topic_list=args.topics,
+        >> ROSbag_Pose2Ranges.extract(bagfile_name=args.bagfile, topic_list=args.topics,
                       fn_list=args.filenames, result_dir=args.result_dir,
                       verbose=args.verbose, fmt=CSVSpatialFormatType(args.format)):
 
@@ -67,15 +67,15 @@ class ROSbag2CSV:
         """
 
         if not os.path.isfile(bagfile_name):
-            print("ROSbag2CSV: could not find file: %s" % bagfile_name)
+            print("ROSbag_Pose2Ranges: could not find file: %s" % bagfile_name)
             return False
         cfg = os.path.abspath(cfg)
         if not os.path.isfile(cfg):
-            print("ROSbag2CSV: could not find file: %s" % cfg)
+            print("ROSbag_Pose2Ranges: could not find file: %s" % cfg)
             return False
 
         if verbose:
-            print("ROSbag2CSV:")
+            print("ROSbag_Pose2Ranges:")
             print("* bagfile name: " + str(bagfile_name))
             print("* topic: \t " + str(topic))
             print("* cfg: \t " + str(cfg))
@@ -86,7 +86,7 @@ class ROSbag2CSV:
             bag = rosbag.Bag(bagfile_name)
         except:
             if verbose:
-                print("ROSbag2CSV: Unexpected error!")
+                print("ROSbag_Pose2Ranges: Unexpected error!")
 
             return False
 
@@ -109,7 +109,7 @@ class ROSbag2CSV:
 
         if info_dict is None or 'messages' not in info_dict:
             if verbose:
-                print("ROSbag2CSV: Unexpected error, bag file might be empty!")
+                print("ROSbag_Pose2Ranges: Unexpected error, bag file might be empty!")
             bag.close()
             return False
 
@@ -136,7 +136,7 @@ class ROSbag2CSV:
         topicName = topic
 
         if topicName[0] != '/':
-            print("ROSbag2CSV: Not a proper topic name: %s (should start with /)" % topicName)
+            print("ROSbag_Pose2Ranges: Not a proper topic name: %s (should start with /)" % topicName)
             return False
 
         if not filename:
@@ -157,7 +157,7 @@ class ROSbag2CSV:
         dict_csvfile_hdls[topicName] = csvfile
 
         if verbose:
-            print("ROSbag2CSV: creating csv file: %s " % filename)
+            print("ROSbag_Pose2Ranges: creating csv file: %s " % filename)
 
         ## check if desired topics are in the bag file:
         num_messages = info_dict['messages']
@@ -172,7 +172,7 @@ class ROSbag2CSV:
             print("# WARNING: desired topic [" + str(topicName) + "] is not in bag file!")
 
         if verbose:
-            print("\nROSbag2CSV: num messages " + str(num_messages))
+            print("\nROSbag_Pose2Ranges: num messages " + str(num_messages))
 
         ## extract the desired topics from the BAG file
         try:  # else already exists
@@ -190,7 +190,7 @@ class ROSbag2CSV:
                         q_GB = [msg.transform.rotation.w,msg.transform.rotation.x,msg.transform.rotation.y,msg.transform.rotation.z]
                         T_GLOBAL_BODY = SE3.Rt(Quaternion(q_GB).unit().R, t, check=False)
                     else:
-                        print("\nROSbag2CSV: unsupported message " + str(msg))
+                        print("\nROSbag_Pose2Ranges: unsupported message " + str(msg))
                         continue
 
                     for TAG_ID, tag_pos in dict_cfg["rel_tag_positions"].items():
@@ -214,7 +214,7 @@ class ROSbag2CSV:
 
                             file_writer.writerow(content)
         except:
-            print("ROSbag2CSV: Unexpected error while reading the bag file!\n * try: $ rosbag fix <bagfile> <fixed>")
+            print("ROSbag_Pose2Ranges: Unexpected error while reading the bag file!\n * try: $ rosbag fix <bagfile> <fixed>")
             return False
         ## CLEANUP:
         # close all csv files
@@ -223,7 +223,7 @@ class ROSbag2CSV:
         # check if a topic was found by checking if the topic header was written
         topicName = topic
         if not dict_header_written[topicName]:
-            print("\nROSbag2CSV: \n\tWARNING topic [" + str(topicName) + "] was not in bag-file")
+            print("\nROSbag_Pose2Ranges: \n\tWARNING topic [" + str(topicName) + "] was not in bag-file")
             print("\tbag file [" + str(bagfile_name) + "] contains: ")
             # print(info_dict['topics'])
             for t in info_dict['topics']:
@@ -231,7 +231,7 @@ class ROSbag2CSV:
             return False
 
         if verbose:
-            print("\nROSbag2CSV: extracting done! ")
+            print("\nROSbag_Pose2Ranges: extracting done! ")
 
         bag.close()
         return True
@@ -252,7 +252,7 @@ if __name__ == "__main__":
     tp_start = time.time()
     args = parser.parse_args()
 
-    if ROSbag2CSV.extract(bagfile_name=args.bagfile, topic=str(args.topic), cfg=args.cfg,
+    if ROSbag_Pose2Ranges.extract(bagfile_name=args.bagfile, topic=str(args.topic), cfg=args.cfg,
                           filename=args.filename, result_dir=args.result_dir,
                           verbose=args.verbose
                           ):
