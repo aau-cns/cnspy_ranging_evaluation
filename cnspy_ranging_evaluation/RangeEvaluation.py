@@ -29,7 +29,7 @@ import numpy as np
 
 import cnspy_numpy_utils.numpy_statistics
 from cnspy_timestamp_association.TimestampAssociation import TimestampAssociation
-from AssociateRanges import AssociateRanges, AssociateRangesCfg
+from cnspy_ranging_evaluation.AssociateRanges import AssociateRanges, AssociateRangesCfg
 from matplotlib import pyplot as plt
 
 class RangeEvaluation:
@@ -121,11 +121,17 @@ class RangeEvaluation:
                     assoc.plot_ranges(fig=fig_rs, ax=ax_rs, sorted=True, cfg_title=cfg_title)
                 if plot_error:
                     ax_e = fig_e.add_subplot(n_rows, n_cols, idx)
-                    [fig, ax, stat, r_vec_err] = assoc.plot_range_error(fig=fig_e, ax=ax_e, sorted=False, remove_outlier=True, cfg_title=cfg_title)
+                    [fig_, ax_, stat, r_vec_err_] = assoc.plot_range_error(fig=fig_e, ax=ax_e,
+                                                                        sorted=False,
+                                                                        remove_outlier=True,
+                                                                        cfg_title=cfg_title)
                     cnspy_numpy_utils.numpy_statistics.print_statistics(stat, desc=cfg_title + " error")
                 if plot_histogram:
                     ax_h = fig_h.add_subplot(n_rows, n_cols, idx)
-                    assoc.plot_error_histogram(fig=fig_h, ax=ax_h, max_error=1)
+                    assoc.plot_error_histogram(fig=fig_h,
+                                               ax=ax_h,
+                                               max_error=1,
+                                               filter_histogramm=True)
                 # the histogram of the date
                 idx += 1
             if verbose:
