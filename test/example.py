@@ -90,12 +90,12 @@ class RangeEvaluationTrail:
                                result_dir=str(RES_DATA_DIR + '/' + sequence + '-eval/'),
                                prefix='',
                                save_plot=True,
-                               show_plot=False,
+                               show_plot=True,
                                save_statistics=True,
-                               plot_timestamps=False,
-                               plot_ranges=False,
-                               plot_ranges_sorted=False,
-                               plot_error=False,
+                               plot_timestamps=True,
+                               plot_ranges=True,
+                               plot_ranges_sorted=True,
+                               plot_error=True,
                                plot_histogram=True,
                                )
 

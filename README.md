@@ -25,41 +25,10 @@ pip3 install cnspy_ranging_evaluation
 This package contains different tools to evaluate the Two-Way-Ranging (TWR) measurements between pairs  <ID1, ID2> of devices. 
 
 1. Record a bag file on the drone with all UWB ranging topics.
-2. Specify a YAML configuration file, e.g, `cfgs_tags.yaml` (see below).
-3. Run `TWR_ROSbag2CSV.py` on the measured bag file
-```commandline 
-python TWR_ROSbag2CSV.py --bagfile DH_A9_T2_loiter_spiral_8m_2023-09-02-23-36-02.bag --topics /a01/ranging /a02/ranging /a03/ranging /a04/ranging /a06/ranging /a07/ranging /a08/ranging /a09/ranging /a10/ranging /d01/tag1/ranging /d01/tag2/ranging --verbose --filenames all_measured_ranges.csv
-```
-4. Run `ROSBag_TrueRanges` to generate a clean (true) bag file of the obtained one
-```commandline  
-python ROSBag_TrueRanges.py
---bagfile_in DH_A9_T2_loiter_spiral_8m_2023-09-02-23-36-02.bag
---bagfile_out DH_A9_T2_loiter_spiral_8m_2023-09-02-23-36-02-true-ranges.bag
---topic_pose
-/d01/mavros/vision_pose/pose
---cfg cfg_tags.yaml
---verbose
---std_range 0.0001
-``` 
-5. Run `TWR_ROSbag2CSV.py` on the clean (true) bag file
-```commandline 
-python TWR_ROSbag2CSV.py --bagfile ./DH_A9_T2_loiter_spiral_8m_2023-09-02-23-36-02-true-ranges.bag --topics /a01/ranging /a02/ranging /a03/ranging /a04/ranging /a05/ranging /a06/ranging /a07/ranging /a08/ranging /a09/ranging /a10/ranging  --verbose --filenames all_true_ranges.csv
-```
-6. Run `RangeEvaluation.py` using both csv files
-```cmd
---fn_gt ./DH_A9_T2_loiter_spiral_8m/DH_A9_T2_loiter_spiral_8m_2023-09-02-23-36-02-true-ranges/all_true_ranges.csv
---fn_est ./DH_A9_T2_loiter_spiral_8m/DH_A9_T2_loiter_spiral_8m_2023-09-02-23-36-02/all_meas_ranges.csv
---result_dir .DH_A9_T2_loiter_spiral_8m/DH_A9_T2_loiter_spiral_8m_2023-09-02-23-36-02/bias_eval/
---UWB_ID1s 100 101 102 103 104 105 106 107 108 109 110
---UWB_ID2s 100 101 102 103 104 105 106 107 108  109 110
---plot
---show_plot
---plot_histograms
---relative_timestamp
---verbose
---max_range 15
---max_timestamp_difference 0.02
-```
+2. Specify a YAML configuration file, e.g, `cfgs.yaml` (see below).
+3. Run the `RangeEvaluationTool.py --bagfile <our bagfile> --cfg <your cfg.yaml> --verbose --show_plots --save_plots`
+4. A folder next to the your bag file was created containing the folder `eval` with plots and a `statistics.yaml`
+5. No data at hand for testing? Use the provided test data: [T1_A3_loiter_2m_2023-08-31-20-58-20.bag](./test/sample_data/T1_A3_loiter_2m_2023-08-31-20-58-20.bag) and [config.yaml](./test/sample_data/config.yaml).
 
 ### YAML configuration file
 
@@ -69,11 +38,37 @@ YAML configuration file is in the form of:
 rel_tag_positions: {100: [-0.19, 0.105, -0.07], 105: [0.05, -0.105, -0.07]}
 tag_topics: {100: "/d01/tag1/ranging", 105: "/d01/tag2/ranging"}
 anchor_topics: {101: "/a01/ranging", 102: "/a02/ranging", 103: "/a03/ranging", 104: "/a04/ranging", 106: "/a06/ranging", 107: "/a07/ranging", 108: "/a08/ranging", 109: "/a09/ranging", 110: "/a10/ranging"}
+pose_topic: "/d01/mavros/vision_pose/pose"
 # relative position of the stationary anchors
 abs_anchor_positions: {101: [-1.308, -4.140, 0.66], 102: [1.742,-4.147,1.881], 103: [2.914,2.081,2.172], 104: [0.18, -4.13, 3.242], 106: [-1.772, 0.943, 3.256], 107: [-2.021, 1.814, 1.732], 108: [-1.98, 0.069, 1.76], 109: [0.433, 4.105, 0.925], 110: [2.59, -0.2, 0.33]}
 ```
 
 ## Tools 
+
+
+### RangeEvaluationTool
+
+```commandline
+cnspy_ranging_evaluation$ python RangeEvaluationTool.py -h
+usage: RangeEvaluationTool.py [-h] [--result_dir RESULT_DIR]
+                              [--bagfile BAGFILE] --cfg CFG [--save_plot]
+                              [--show_plot] [--verbose]
+
+RangeEvaluationTool: evaluation the measured ranges
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --result_dir RESULT_DIR
+                        directory to store results [otherwise bagfile name
+                        will be a directory]
+  --bagfile BAGFILE     input bag file
+  --cfg CFG             YAML configuration file describing the setup:
+                        {rel_tag_positions, abs_anchor_positions}
+  --save_plot
+  --show_plot
+  --verbose
+```
+
 
 ### ROSBag_TrueRanges
 ```commandline
