@@ -21,7 +21,7 @@
 ########################################################################################################################
 import os
 from sys import version_info
-
+import time
 import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pandas
@@ -528,16 +528,21 @@ class AssociateRanges:
     @staticmethod
     def show_save_figure(fig, save_fn="", result_dir=".", dpi=200, show=True, close_figure=False):
         assert (isinstance(fig, plt.Figure))
+
         plt.pause(0.1)
-        plt.draw()
+        # set current active again
+        plt.figure(fig.number)
+        # draw
+        fig.canvas.draw_idle()
         plt.pause(0.1)
+        time.sleep(0.1)
         if save_fn:
             if not os.path.exists(result_dir):
                 os.makedirs(result_dir)
 
             filename = os.path.join(result_dir, save_fn)
             print("save to file: " + filename)
-            plt.savefig(filename, dpi=int(dpi))
+            plt.savefig(fig=fig, fname=filename, dpi=int(dpi))
         if show:
             plt.show()
         if close_figure:

@@ -53,7 +53,8 @@ class RangeEvaluation:
                  plot_error =True,
                  plot_histogram=True,
                  verbose=False,
-                 filter_histogram=True):
+                 filter_histogram=True
+                 ):
         if not result_dir:
             result_dir = '.'
         if not prefix:
@@ -171,33 +172,36 @@ class RangeEvaluation:
                 fig_t.tight_layout()
                 if save_plot:
                     AssociateRanges.show_save_figure(fig=fig_t, result_dir=result_dir,
-                                                     save_fn=str("Timestamps" + str(UWB_ID1)), show=False)
+                                                     save_fn=str("Timestamps" + str(UWB_ID1)),
+                                                     show=show_plot, close_figure=not show_plot)
 
             if plot_ranges:
                fig_r.tight_layout()
                if save_plot:
                    AssociateRanges.show_save_figure(fig=fig_r, result_dir=result_dir,
-                                                    save_fn=str("Ranges_ID" + str(UWB_ID1)), show=False)
+                                                    save_fn=str("Ranges_ID" + str(UWB_ID1)),
+                                                    show=show_plot, close_figure=not show_plot)
 
             if plot_ranges_sorted:
                 fig_rs.tight_layout()
                 if save_plot:
                     AssociateRanges.show_save_figure(fig=fig_rs, result_dir=result_dir,
-                                                     save_fn=str("Range_Sorted_ID" + str(UWB_ID1)), show=False)
+                                                     save_fn=str("Range_Sorted_ID" + str(UWB_ID1)),
+                                                     show=show_plot, close_figure=not show_plot)
 
             if plot_error:
                 fig_e.tight_layout()
                 if save_plot:
                     AssociateRanges.show_save_figure(fig=fig_e, result_dir=result_dir,
-                                                     save_fn=str("Errors_ID" + str(UWB_ID1)), show=False)
+                                                     save_fn=str("Errors_ID" + str(UWB_ID1)),
+                                                     show=show_plot, close_figure=not show_plot)
 
             if plot_histogram:
                 fig_h.tight_layout()
                 if save_plot:
                     AssociateRanges.show_save_figure(fig=fig_h, result_dir=result_dir,
-                                                     save_fn=str("Histograms_ID" + str(UWB_ID1)), show=False)
-            if show_plot:
-                plt.show()
+                                                     save_fn=str("Histograms_ID" + str(UWB_ID1)),
+                                                     show=show_plot, close_figure=not show_plot)
 
             if save_statistics:
                 yaml.dump(dict_statistics_i, statistics_file,explicit_start=True, default_flow_style=True)
