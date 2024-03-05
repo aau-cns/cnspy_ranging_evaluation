@@ -220,7 +220,8 @@ class AssociateRanges:
             ax.set_ylabel('time [s]')
         else:
             x_arr = range(len(t_vec_gt))
-            t_vec_err = t_vec_gt - t_vec_est
+            # t_est = t_true + t_err
+            t_vec_err = t_vec_est - t_vec_gt
             AssociateRanges.ax_plot_n_dim(ax, x_arr, t_vec_err, colors=['r'], labels=['err'], ls=ls_vec[0])
             ax.grid(b=True)
             ax.set_xlabel('idx')
@@ -300,7 +301,8 @@ class AssociateRanges:
             r_vec_est = self.data_frame_est_matched[[self.cfg.label_range]].to_numpy()
 
         if not sort:
-            r_vec_err = r_vec_gt - r_vec_est
+            # if r_est = r_true + r_err, then  r_err is an offset or the constant bias (gamma).
+            r_vec_err = r_vec_est - r_vec_gt
             t_vec = t_vec_gt
             if remove_outlier:
                 if not self.cfg.remove_outliers:
@@ -318,7 +320,8 @@ class AssociateRanges:
 
                 return [t_vec, r_vec_err]
         else:
-            r_vec_err = r_vec_gt - r_vec_est
+            # if r_est = r_true + r_err, then  r_err is an offset or the constant bias (gamma).
+            r_vec_err = r_vec_est - r_vec_gt
             x_arr = r_vec_gt
             if remove_outlier:
                 if not self.cfg.remove_outliers and not max_error:
@@ -359,7 +362,7 @@ class AssociateRanges:
         if not sorted:
             AssociateRanges.ax_plot_n_dim(ax, t_vec, r_vec_err, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
             ax.grid(b=True)
-            ax.set_ylabel('range error')
+            ax.set_ylabel('range error (est-gt)')
             ax.set_xlabel('time [s]')
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
 
@@ -368,7 +371,7 @@ class AssociateRanges:
                                           colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
 
             ax.grid(b=True)
-            ax.set_ylabel('range error')
+            ax.set_ylabel('range error (est-gt)')
             ax.set_xlabel('range sorted index')
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
 

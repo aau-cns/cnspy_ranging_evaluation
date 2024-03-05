@@ -12,6 +12,7 @@ The following evaluations can be conducted:
 | Histogram (filtered) and distribution | ![](./doc/Histogram_0to1.png) |
 | Statistics | [statistics.yaml](./doc/statistics.yaml) |
 
+**Attention:** The following error definition for the range error is used: `err = est - gt`. This error representation directly renders the constant_bias (gamma) term of the ranging model: `range_meas = beta * range_true + gamma`. 'Assuming that `beta = 1` leads to `gamma = range_meas - range_true`.
 
 ## Installation
 
