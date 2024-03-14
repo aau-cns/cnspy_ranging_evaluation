@@ -135,9 +135,11 @@ class ROSbag_TrueRanges:
                 bagfile_out_name,
                 topic_pose,
                 cfg,
-                std_range=0.1,
-                bias_offset=0,
-                bias_range=1,
+                stddev_range=0.1,
+                bias_offset=0,  # gamma
+                bias_range=1,   # beta
+                perc_outliers=0.0,
+                stddev_outlier=0.5,
                 use_header_timestamp=False,
                 verbose=False):
         if not os.path.isfile(bagfile_in_name):
@@ -156,9 +158,11 @@ class ROSbag_TrueRanges:
             print("* bagfile out name: " + str(bagfile_out_name))
             print("* topic: \t " + str(topic_pose))
             print("* cfg YAML file: \t " + str(cfg))
-            print("* std_range: " + str(std_range))
+            print("* std_range: " + str(stddev_range))
             print("* bias_offset: " + str(bias_offset))
             print("* bias_range: " + str(bias_range))
+            print("* perc_outliers: " + str(perc_outliers))
+            print("* outlier_stddev: " + str(stddev_outlier))
             print("* use_header_timestamp: " + str(use_header_timestamp))
         ## Open BAG file:
         try:
@@ -286,9 +290,24 @@ class ROSbag_TrueRanges:
 
         hist_poses = HistoryBuffer(dict_t=dict_poses)
 
-        noise_range_arr = np.random.normal(0, std_range, size=num_messages)  # 1000 samples with normal distribution
-        idx = 0
+        noise_range_arr = np.random.normal(0, stddev_range, size=num_messages)  # 1000 samples with normal distribution
 
+        if perc_outliers > 0.0:
+            perc_outliers = min(perc_outliers, 1.0)
+            # generating offset for outliers
+            outlier_offset_arr = np.random.normal(0, stddev_outlier, size=num_messages) + stddev_outlier
+            indices = np.arange(num_messages)
+            np.random.shuffle(indices)
+
+            num_inliers = int(num_messages*(1.0-perc_outliers))
+            if num_inliers:
+                inlier_indices = indices[np.array(range(num_inliers))]
+                # remove the offset from the inliers
+                outlier_offset_arr[inlier_indices] = 0
+        else:
+            outlier_offset_arr = np.zeros(num_messages)
+
+        idx = 0
         cnt_T2A = 0
         cnt_A2T = 0
         cnt_A2A = 0
@@ -353,9 +372,9 @@ class ROSbag_TrueRanges:
                             t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
                             t_TA = T_GLOBAL_TAG1.t - t_GA2
                             d_TA = LA.norm(t_TA)
-                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
+                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
                             msg.range_corr = d_TA
-                            msg.R = std_range * std_range
+                            msg.R = stddev_range * stddev_range
                             idx += 1
                             cnt_T2A += 1
                             pass
@@ -366,9 +385,9 @@ class ROSbag_TrueRanges:
                             T_BODY_TAG2 = SE3(np.array(t_bt2))
                             T_GLOBAL_TAG2 = T_GLOBAL_BODY * T_BODY_TAG2
                             d_T1_T2 = LA.norm(T_GLOBAL_TAG1 - T_GLOBAL_TAG2)
-                            msg.range_raw = bias_range * d_T1_T2 + bias_offset + noise_range_arr[idx]
+                            msg.range_raw = bias_range * d_T1_T2 + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
                             msg.range_corr = d_T1_T2
-                            msg.R = std_range * std_range
+                            msg.R = stddev_range * stddev_range
                             idx += 1
                             cnt_T2T += 1
                             pass
@@ -392,9 +411,9 @@ class ROSbag_TrueRanges:
                         if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
                             t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
                             d_TA = LA.norm(t_GA1 - t_GA2)
-                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
+                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
                             msg.range_corr = d_TA
-                            msg.R = std_range * std_range
+                            msg.R = stddev_range * stddev_range
                             idx += 1
                             cnt_A2A += 1
                             pass
@@ -438,9 +457,9 @@ class ROSbag_TrueRanges:
                             T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
                             t_TA = T_GLOBAL_TAG1.t - t_GA1
                             d_TA = LA.norm(t_TA)
-                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx]
+                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
                             msg.range_corr = d_TA
-                            msg.R = std_range * std_range
+                            msg.R = stddev_range * stddev_range
                             idx += 1
                             cnt_A2T += 1
                             pass
@@ -475,7 +494,8 @@ class ROSbag_TrueRanges:
 if __name__ == "__main__":
     # example: ROSBag_Pose2Ranges.py --bagfile ../test/sample_data//uwb_calib_a01_2023-08-31-21-05-46.bag --topic /d01/mavros/vision_pose/pose --cfg ../test/sample_data/config.yaml --verbose
     parser = argparse.ArgumentParser(
-        description='ROSBag_TrueRanges: extract a given pose topic and compute ranges to N abs_anchor_positions and M rel_tag_positions, which is stored into a CSV file')
+        description='ROSBag_TrueRanges: extract a given pose topic and compute ranges to N abs_anchor_positions and M '
+                    'rel_tag_positions, which is stored into a CSV file')
     parser.add_argument('--bagfile_in', help='input bag file', required=True)
     parser.add_argument('--bagfile_out', help='output bag file', default="")
     parser.add_argument('--topic_pose', help='desired topic', required=True)
@@ -490,6 +510,11 @@ if __name__ == "__main__":
                         default=0.0)
     parser.add_argument('--bias_range',
                         help='range-based biased multiplied to generated measurements: z = bias_range * d', default=1.0)
+    parser.add_argument('--perc_outliers', help='specifies a percentage of generated outliers by modified the '
+                                                'measurement: z = d + white_noise(std_range) + std_range',
+                        default=0.0)
+    parser.add_argument('--outlier_stddev', help='standard deviation of the outliers.',
+                        default=1.0)
     parser.add_argument('--use_header_timestamp', action='store_true',
                         help='overwrites the bag time with the header time stamp', default=False)
     tp_start = time.time()
@@ -499,9 +524,11 @@ if __name__ == "__main__":
                                  bagfile_out_name=args.bagfile_out,
                                  topic_pose=str(args.topic_pose),
                                  cfg=args.cfg,
-                                 verbose=args.verbose, std_range=float(args.std_range),
+                                 verbose=args.verbose, stddev_range=float(args.std_range),
                                  bias_offset=float(args.bias_offset),
                                  bias_range=float(args.bias_range),
+                                 perc_outliers=float(args.perc_outliers),
+                                 stddev_outlier=float(args.outlier_stddev),
                                  use_header_timestamp=args.use_header_timestamp):
         print(" ")
         print("finished after [%s sec]\n" % str(time.time() - tp_start))

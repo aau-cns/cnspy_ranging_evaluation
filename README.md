@@ -84,7 +84,7 @@ optional arguments:
 ### ROSBag_TrueRanges
 ```commandline
 cnspy_ranging_evaluation$ python ROSBag_TrueRanges.py -h
-usage: ROSBag_TrueRanges.py [-h] --bagfile_in BAGFILE_IN [--bagfile_out BAGFILE_OUT] --topic_pose TOPIC_POSE --cfg CFG [--verbose] [--std_range STD_RANGE] [--bias_offset BIAS_OFFSET] [--bias_range BIAS_RANGE] [--use_header_timestamp]
+usage: ROSBag_TrueRanges.py [-h] --bagfile_in BAGFILE_IN [--bagfile_out BAGFILE_OUT] --topic_pose TOPIC_POSE --cfg CFG [--verbose] [--std_range STD_RANGE] [--bias_offset BIAS_OFFSET] [--bias_range BIAS_RANGE] [--perc_outliers PERC_OUTLIERS] [--outlier_stddev OUTLIER_STDDEV] [--use_header_timestamp]
 
 ROSBag_TrueRanges: extract a given pose topic and compute ranges to N abs_anchor_positions and M rel_tag_positions, which is stored into a CSV file
 
@@ -104,8 +104,13 @@ optional arguments:
                         constant offset added to generated measurements: z = d + bias_offset
   --bias_range BIAS_RANGE
                         range-based biased multiplied to generated measurements: z = bias_range * d
+  --perc_outliers PERC_OUTLIERS
+                        specifies a percentage of generated outliers by modified the measurement: z = d + white_noise(std_range) + std_range
+  --outlier_stddev OUTLIER_STDDEV
+                        standard deviation of the outliers.
   --use_header_timestamp
                         overwrites the bag time with the header time stamp
+
 ```
 
 YAML configuration file is in the form of:

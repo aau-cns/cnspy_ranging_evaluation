@@ -98,7 +98,7 @@ class RangeEvaluationTool:
                                             topic_pose=dict_cfg["pose_topic"],
                                             cfg=cfg,
                                             verbose=verbose,
-                                            std_range=0.001)
+                                            stddev_range=0.001)
 
         if not os.path.isfile(fn_gt_ranges):
             # 3) extract all measurements from the clean bagfile
