@@ -173,6 +173,19 @@ class ROSbag_TrueRanges:
 
             return False
 
+        ## create result dir:
+        [root, ext] = os.path.splitext(bagfile_out_name)
+        [head, tail] = os.path.split(root)
+        try:  # else already exists
+            os.makedirs(head)
+        except:
+            pass
+
+        if verbose:
+            print("* result_dir: \t " + str(head))
+
+
+
         dict_cfg = None
         with open(cfg, "r") as yamlfile:
             dict_cfg = yaml.load(yamlfile, Loader=yaml.FullLoader)
