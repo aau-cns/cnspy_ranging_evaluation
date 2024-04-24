@@ -14,7 +14,7 @@ with open(path.join(here, 'RELEASE'), encoding='utf-8') as f:
     release = f.read()
 
 setup(
-    name='cnspy_trajectory_evaluation',
+    name='cnspy_ranging_evaluation',
     version=release,
     author='Roland Jung',
     author_email='roland.jung@aau.at',    
