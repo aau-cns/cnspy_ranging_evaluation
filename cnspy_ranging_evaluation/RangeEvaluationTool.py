@@ -146,7 +146,7 @@ class RangeEvaluationTool:
 
 
 
-if __name__ == "__main__":
+def main():
     # RangeEvaluationTool.py --bagfile  ./test/sample_data/T1_A3_loiter_2m_2023-08-31-20-58-20.bag --cfg ./test/sample_data/config.yaml
     parser = argparse.ArgumentParser(
         description='RangeEvaluationTool: evaluation the measured ranges')
@@ -169,3 +169,9 @@ if __name__ == "__main__":
                                  save_plot=args.save_plot,
                                  show_plot=args.show_plot,
                                  verbose=args.verbose)
+    pass
+
+
+if __name__ == "__main__":
+    main()
+    pass

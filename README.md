@@ -30,6 +30,15 @@ which installs the package in-place, allowing you make changes to the code witho
 ```commandline
 pip3 install cnspy_ranging_evaluation
 ```
+## Run from terminal
+
+* CSV_StaticBiasAnalysis 
+* IMU_ROSbag2CSV
+* RangeEvaluationTool
+* ROSBag_Pose2Ranges
+* ROSBag_TrueRanges
+* TWR_ROSbag2CSV 
+
 
 ## Usage
 

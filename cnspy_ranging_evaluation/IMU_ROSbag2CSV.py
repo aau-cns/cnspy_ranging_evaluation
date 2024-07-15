@@ -177,7 +177,7 @@ class IMU_ROSbag2CSV:
         return True
 
 
-if __name__ == "__main__":
+def main():
     # test3: python3 TWR_ROSbag2CSV.py --bagfile ../test/example.bag --topics /a01/ranging /a02/ranging--verbose --filenames ranges.csv
     parser = argparse.ArgumentParser(
         description='IMU_ROSbag2CSV: extract the linear_acceleration and the angular_velocity of given topics within a rosbag into a CSV file')
@@ -201,3 +201,8 @@ if __name__ == "__main__":
     else:
         print("failed! after [%s sec]\n" % str(time.time() - tp_start))
     pass
+
+if __name__ == "__main__":
+    main()
+    pass
+

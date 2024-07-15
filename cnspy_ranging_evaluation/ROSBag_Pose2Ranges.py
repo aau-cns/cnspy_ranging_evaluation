@@ -237,7 +237,7 @@ class ROSbag_Pose2Ranges:
         return True
 
 
-if __name__ == "__main__":
+def main():
     # example: ROSBag_Pose2Ranges.py --bagfile ../test/sample_data//uwb_calib_a01_2023-08-31-21-05-46.bag --topic /d01/mavros/vision_pose/pose --cfg ../test/sample_data/config.yaml --verbose
     parser = argparse.ArgumentParser(
         description='ROSBag_Pose2Ranges: extract a given pose topic and compute ranges to N abs_anchor_positions and M rel_tag_positions, which is stored into a CSV file')
@@ -260,3 +260,9 @@ if __name__ == "__main__":
         print("finished after [%s sec]\n" % str(time.time() - tp_start))
     else:
         print("failed! after [%s sec]\n" % str(time.time() - tp_start))
+    pass
+
+
+if __name__ == "__main__":
+    main()
+    pass
