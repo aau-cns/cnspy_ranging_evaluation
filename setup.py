@@ -11,7 +11,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='cnspy_ranging_evaluation',
-    version="0.2.3",
+    version="0.2.4",
     author='Roland Jung',
     author_email='roland.jung@aau.at',
     description='Evaluation of range measurements.',
@@ -34,12 +34,12 @@ setup(
     install_requires=['numpy', 'pandas', 'spatialmath-python', 'scipy', 'matplotlib', 'joblib', 'configparser', 'cnspy_numpy_utils', 'cnspy_timestamp_association' ],
     entry_points={
         'console_scripts': [
-            'CSV_StaticBiasAnalysis = cnspy_rosbag2csv.CSV_StaticBiasAnalysis:main',
-            'IMU_ROSbag2CSV = cnspy_rosbag2csv.IMU_ROSbag2CSV:main',
-            'RangeEvaluationTool = cnspy_rosbag2csv.RangeEvaluationTool:main',
-            'ROSBag_Pose2Ranges = cnspy_rosbag2csv.ROSBag_Pose2Ranges:main',
-            'ROSBag_TrueRanges = cnspy_rosbag2csv.ROSBag_TrueRanges:main',
-            'TWR_ROSbag2CSV = cnspy_rosbag2csv.TWR_ROSbag2CSV:main',
+            'CSV_StaticBiasAnalysis = cnspy_ranging_evaluation.CSV_StaticBiasAnalysis:main',
+            'IMU_ROSbag2CSV = cnspy_ranging_evaluation.IMU_ROSbag2CSV:main',
+            'RangeEvaluationTool = cnspy_ranging_evaluation.RangeEvaluationTool:main',
+            'ROSBag_Pose2Ranges = cnspy_ranging_evaluation.ROSBag_Pose2Ranges:main',
+            'ROSBag_TrueRanges = cnspy_ranging_evaluation.ROSBag_TrueRanges:main',
+            'TWR_ROSbag2CSV = cnspy_ranging_evaluation.TWR_ROSbag2CSV:main',
         ],
     },
 )
