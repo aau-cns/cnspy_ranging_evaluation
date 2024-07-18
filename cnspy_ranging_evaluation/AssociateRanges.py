@@ -29,30 +29,12 @@ import math
 
 from cnspy_numpy_utils.numpy_statistics import *
 from cnspy_timestamp_association.TimestampAssociation import TimestampAssociation
+from cnspy_trajectory.PlotLineStyle import PlotLineStyle
 
-
-class PlotLineStyle():
-    linecolor = 'r'  # b,g,r,c,m,y,k,w
-    linewidth = 1
-    linestyle = '-'  # '-', '--', '-.', ':'
-    marker = '.'  # '.', ',', 'o', 'v', '^', '<', '>', '1..4', 's', 'p'
-    markersize = 12
-    markerfacecolor = 'blue'
-    label = 'x'
-
-    def __init__(self, linecolor='r', linewidth=1, linestyle='-', marker='o', markersize=12,
-                 markerfacecolor='blue', label='x'):
-        self.linecolor = linecolor
-        self.linewidth = linewidth
-        self.linestyle = linestyle
-        self.marker = marker
-        self.markersize = markersize
-        self.markerfacecolor = markerfacecolor
-        self.label = label
 
 class AssociateRangesCfg:
-    UWB_ID1 = None
-    UWB_ID2 = None
+    ID1 = None
+    ID2 = None
     relative_timestamps = False
     max_difference = 0.02
     subsample = 0
@@ -64,7 +46,7 @@ class AssociateRangesCfg:
     label_ID1 = 'UWB_ID1'
     label_ID2 = 'UWB_ID2'
     label_range = 'range_raw'
-    def __init__(self, UWB_ID1=None, UWB_ID2=None, relative_timestamps=False,
+    def __init__(self, ID1=None, ID2=None, relative_timestamps=False,
                  max_difference=0.02, subsample=0, verbose=False, remove_outliers=False,
                  max_range=30, range_error_val=0, label_timestamp='t',
                  label_ID1='UWB_ID1',
@@ -73,8 +55,8 @@ class AssociateRangesCfg:
         self.label_ID1 = label_ID1
         self.label_ID2 = label_ID2
         self.label_range = label_range
-        self.UWB_ID1 = UWB_ID1
-        self.UWB_ID2 = UWB_ID2
+        self.ID1 = ID1
+        self.ID2 = ID2
         self.relative_timestamps = relative_timestamps
         self.max_difference = max_difference
         self.subsample = subsample
@@ -94,12 +76,17 @@ class AssociateRanges:
 
     matches_est_gt = None  # list of tuples containing [(idx_est, idx_gt), ...]
 
-    cfg = AssociateRangesCfg()
+    cfg = None
     data_loaded = False
+
+    def __init__(self):
+        pass
 
     def __init__(self, fn_gt, fn_est, cfg):
         self.cfg = cfg
+        self.load(fn_gt, fn_est, cfg)
 
+    def load(self, fn_gt, fn_est, cfg):
 
         assert (os.path.exists(fn_gt)), str("Path to fn_gt does not exist!:" + str(fn_gt))
         assert (os.path.exists((fn_est))), str("Path to fn_est does not exist!:" + str(fn_est))
@@ -107,19 +94,19 @@ class AssociateRanges:
         self.csv_df_gt = pandas.read_csv(fn_gt, sep='\s+|\,', comment='#', engine='python')
         self.csv_df_est = pandas.read_csv(fn_est, sep='\s+|\,', comment='#', engine='python')
 
-        if cfg.UWB_ID1 is not None:
-            self.csv_df_gt = (self.csv_df_gt.loc[self.csv_df_gt[cfg.label_ID1] == cfg.UWB_ID1])
-            self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est[cfg.label_ID1] == cfg.UWB_ID1])
+        if cfg.ID1 is not None:
+            self.csv_df_gt = (self.csv_df_gt.loc[self.csv_df_gt[cfg.label_ID1] == cfg.ID1])
+            self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est[cfg.label_ID1] == cfg.ID1])
 
             if len(self.csv_df_gt) == 0 or len(self.csv_df_est) == 0:
-                print("ID1=" + str(cfg.UWB_ID1) + " not found")
+                print("ID1=" + str(cfg.ID1) + " not found")
                 return
 
-        if cfg.UWB_ID2 is not None:
-            self.csv_df_gt = (self.csv_df_gt.loc[self.csv_df_gt[cfg.label_ID2] == cfg.UWB_ID2])
-            self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est[cfg.label_ID2] == cfg.UWB_ID2])
+        if cfg.ID2 is not None:
+            self.csv_df_gt = (self.csv_df_gt.loc[self.csv_df_gt[cfg.label_ID2] == cfg.ID2])
+            self.csv_df_est = (self.csv_df_est.loc[self.csv_df_est[cfg.label_ID2] == cfg.ID2])
             if len(self.csv_df_gt) == 0 or len(self.csv_df_est) == 0:
-                print("ID2=" + str(cfg.UWB_ID2) + " not found")
+                print("ID2=" + str(cfg.ID2) + " not found")
                 return
 
         if cfg.remove_outliers:
@@ -215,7 +202,7 @@ class AssociateRanges:
             x_arr = range(len(t_vec_est))
             AssociateRanges.ax_plot_n_dim(ax, x_arr, t_vec_est, colors=[colors[1]], labels=[labels[1]], ls=ls_vec[1])
 
-            ax.grid(b=True)
+            ax.grid(both=True)
             ax.set_xlabel('idx')
             ax.set_ylabel('time [s]')
         else:
@@ -223,7 +210,7 @@ class AssociateRanges:
             # t_est = t_true + t_err
             t_vec_err = t_vec_est - t_vec_gt
             AssociateRanges.ax_plot_n_dim(ax, x_arr, t_vec_err, colors=['r'], labels=['err'], ls=ls_vec[0])
-            ax.grid(b=True)
+            ax.grid()
             ax.set_xlabel('idx')
             ax.set_ylabel('diff time [s]')
 
@@ -265,7 +252,7 @@ class AssociateRanges:
             # x_arr = range(len(t_vec_est))
             AssociateRanges.ax_plot_n_dim(ax, t_vec_est, r_vec_est, colors=[colors[1]], labels=[labels[1]], ls=ls_vec[1])
 
-            ax.grid(b=True)
+            ax.grid()
             ax.set_ylabel('range')
             ax.set_xlabel('time [s]')
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
@@ -275,7 +262,7 @@ class AssociateRanges:
             x_arr = range(len(r_vec_gt))
             AssociateRanges.ax_plot_n_dim(ax, x_arr, np.take_along_axis(r_vec_gt, gt_indices_sorted, axis=0), colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
             AssociateRanges.ax_plot_n_dim(ax, x_arr, np.take_along_axis(r_vec_est, gt_indices_sorted, axis=0), colors=[colors[1]], labels=[labels[1]], ls=ls_vec[1])
-            ax.grid(b=True)
+            ax.grid()
             ax.set_ylabel('range')
             ax.set_xlabel('range sorted index')
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
@@ -361,7 +348,7 @@ class AssociateRanges:
         [t_vec, r_vec_err] = self.compute_error(sort=sorted, remove_outlier=remove_outlier)
         if not sorted:
             AssociateRanges.ax_plot_n_dim(ax, t_vec, r_vec_err, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
-            ax.grid(b=True)
+            ax.grid()
             ax.set_ylabel('range error (est-gt)')
             ax.set_xlabel('time [s]')
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
@@ -370,7 +357,7 @@ class AssociateRanges:
             AssociateRanges.ax_plot_n_dim(ax, t_vec, r_vec_err,
                                           colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
 
-            ax.grid(b=True)
+            ax.grid()
             ax.set_ylabel('range error (est-gt)')
             ax.set_xlabel('range sorted index')
             AssociateRanges.show_save_figure(fig=fig, result_dir=result_dir, save_fn=save_fn, show=False)
@@ -392,6 +379,9 @@ class AssociateRanges:
         num_bins = 50
         n, bins, patches = ax.hist(r_vec_err, num_bins, density=True, color='red', alpha=0.75, label='Histogram')
 
+        if len(t_vec) == 0 or len(r_vec_err) == 0:
+            return fig, ax, None, None
+
         if not filter_histogramm:
             # add a 'best fit' line
             stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_vec_err)))
@@ -404,7 +394,7 @@ class AssociateRanges:
             ax.plot(bins, y*scaling, '--', color='blue', alpha=0.75, label='PDF')
             ax.set_ylabel('num. samples normalized')
             ax.set_xlabel('error [m]')
-            ax.set_title(r'Histogram '+ str(self.cfg.UWB_ID1) + '-' + str(self.cfg.UWB_ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+            ax.set_title(r'Histogram ' + str(self.cfg.ID1) + '-' + str(self.cfg.ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
             ax.legend()
             return fig, ax, stat, r_vec_err
         else:
@@ -439,7 +429,7 @@ class AssociateRanges:
             ax.plot(bins_, y*scaling, '--', color='green', label='PDF (filtered)')
             ax.set_ylabel('num. samples normalized')
             ax.set_xlabel('error [m]')
-            ax.set_title(r'Histogram (filtered) '+ str(self.cfg.UWB_ID1) + '-' + str(self.cfg.UWB_ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+            ax.set_title(r'Histogram (filtered) ' + str(self.cfg.ID1) + '-' + str(self.cfg.ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
             ax.legend()
             return fig, ax, stat, r_filtered_err
         pass
@@ -543,9 +533,11 @@ class AssociateRanges:
             if not os.path.exists(result_dir):
                 os.makedirs(result_dir)
 
-            filename = os.path.join(result_dir, save_fn)
+            filename = os.path.join(result_dir, save_fn) + ".png"
             print("save to file: " + filename)
-            plt.savefig(fig=fig, fname=filename, dpi=int(dpi))
+            #plt.savefig(fig=fig, fname=filename, dpi=float(dpi), format="png")
+            fig.savefig(filename, dpi=float(dpi), format='png')
+            print("save to file done...")
         if show:
             plt.show()
         if close_figure:

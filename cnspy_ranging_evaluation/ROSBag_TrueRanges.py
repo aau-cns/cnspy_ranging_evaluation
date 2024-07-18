@@ -30,6 +30,7 @@ from tqdm import tqdm
 import numpy as np
 from numpy import linalg as LA, number
 from spatialmath import UnitQuaternion, SO3, SE3, Quaternion, base
+from spatialmath.base.quaternions import qslerp
 
 from std_msgs.msg import Header, Time
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TransformStamped
@@ -64,6 +65,7 @@ class HistoryBuffer:
         dict_t = dict()
         for t_ in self.t_vec:
             dict_t[t_] = val_vec_[idx]
+            idx += 1
 
         self.set_dict(dict_t)
 
@@ -333,8 +335,8 @@ class ROSbag_TrueRanges:
                     if topic in dict_cfg["tag_topics"].values():
                         TAG_ID1 = get_key_from_value(dict_cfg["tag_topics"], topic)
                         text = str("topic: " + str(topic) + " has wrong expected tag id! expected=" + str(
-                            TAG_ID1) + " got=" + str(msg.UWB_ID1))
-                        assert (int(TAG_ID1) == int(msg.UWB_ID1)), text
+                            TAG_ID1) + " got=" + str(msg.ID1))
+                        assert (int(TAG_ID1) == int(msg.ID1)), text
 
                         t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
                         T_BODY_TAG1 = SE3()
@@ -358,8 +360,16 @@ class ROSbag_TrueRanges:
                             dt_i = timestamp - t1
                             i = dt_i / dt
 
+                            q0 = UnitQuaternion(T_GLOBAL_BODY_T1.R)
+                            q1 = UnitQuaternion(T_GLOBAL_BODY_T2.R)
+                            p0 = T_GLOBAL_BODY_T1.t
+                            p1 = T_GLOBAL_BODY_T2.t
+
+                            qr = UnitQuaternion(qslerp(q0.vec, q1.vec, i, shortest=True), norm=True)
+                            pr = p0 * (1 - i) + i * p1
+
                             # interpolate between poses:
-                            T_GLOBAL_BODY = T_GLOBAL_BODY_T1.interp(T_GLOBAL_BODY_T2, abs(i))
+                            T_GLOBAL_BODY = SE3.Rt(qr.R, pr, check=True)
                             if not SE3.isvalid(T_GLOBAL_BODY, check=True):
                                 if T_GLOBAL_BODY.A is None:
                                     if verbose:
@@ -381,8 +391,8 @@ class ROSbag_TrueRanges:
                         T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
 
                         # T2A
-                        if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
-                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
+                        if msg.ID2 in dict_cfg["abs_anchor_positions"].keys():
+                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.ID2])
                             t_TA = T_GLOBAL_TAG1.t - t_GA2
                             d_TA = LA.norm(t_TA)
                             msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
@@ -392,8 +402,8 @@ class ROSbag_TrueRanges:
                             cnt_T2A += 1
                             pass
                         # T2T
-                        elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
-                            TAG_ID2 = msg.UWB_ID2
+                        elif msg.ID2 in dict_cfg["tag_topics"].keys():
+                            TAG_ID2 = msg.ID2
                             t_bt2 = dict_cfg["rel_tag_positions"][TAG_ID2]
                             T_BODY_TAG2 = SE3(np.array(t_bt2))
                             T_GLOBAL_TAG2 = T_GLOBAL_BODY * T_BODY_TAG2
@@ -415,14 +425,14 @@ class ROSbag_TrueRanges:
 
                         ANCHOR_ID1 = get_key_from_value(dict_cfg["anchor_topics"], topic)
                         text = str("topic: " + str(topic) + " has wrong expected anchor id! expected=" + str(
-                            ANCHOR_ID1) + " got=" + str(msg.UWB_ID1))
-                        assert (int(ANCHOR_ID1) == int(msg.UWB_ID1)), text
+                            ANCHOR_ID1) + " got=" + str(msg.ID1))
+                        assert (int(ANCHOR_ID1) == int(msg.ID1)), text
 
                         t_GA1 = np.array(dict_cfg["abs_anchor_positions"][ANCHOR_ID1])
 
                         # A2A
-                        if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
-                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
+                        if msg.ID2 in dict_cfg["abs_anchor_positions"].keys():
+                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.ID2])
                             d_TA = LA.norm(t_GA1 - t_GA2)
                             msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
                             msg.range_corr = d_TA
@@ -431,8 +441,8 @@ class ROSbag_TrueRanges:
                             cnt_A2A += 1
                             pass
                         # A2T
-                        elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
-                            TAG_ID1 = msg.UWB_ID2
+                        elif msg.ID2 in dict_cfg["tag_topics"].keys():
+                            TAG_ID1 = msg.ID2
                             t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
                             T_BODY_TAG1 = SE3()
                             T_BODY_TAG1.t = (np.array(t_bt1))
@@ -507,7 +517,7 @@ class ROSbag_TrueRanges:
 def main():
     # example: ROSBag_Pose2Ranges.py --bagfile ../test/sample_data//uwb_calib_a01_2023-08-31-21-05-46.bag --topic /d01/mavros/vision_pose/pose --cfg ../test/sample_data/config.yaml --verbose
     parser = argparse.ArgumentParser(
-        description='ROSBag_TrueRanges: extract a given pose topic and compute ranges to N abs_anchor_positions and M '
+        description='ROSBag_TrueRanges: compute at given range topics the true ranges to N abs_anchor_positions and M '
                     'rel_tag_positions, which is stored into a CSV file')
     parser.add_argument('--bagfile_in', help='input bag file', required=True)
     parser.add_argument('--bagfile_out', help='output bag file', default="")

@@ -129,8 +129,8 @@ class RangeEvaluation:
                 if UWB_ID1 == UWB_ID2:
                     continue
 
-                cfg.UWB_ID1 = int(UWB_ID1)
-                cfg.UWB_ID2 = int(UWB_ID2)
+                cfg.ID1 = int(UWB_ID1)
+                cfg.ID2 = int(UWB_ID2)
                 cfg_title = str("ID" + str(UWB_ID1) + " to ID" + str(UWB_ID2))
                 assoc = AssociateRanges(fn_gt=fn_gt, fn_est=fn_est, cfg=cfg)
                 assoc.save(result_dir=result_dir, prefix=prefix+cfg_title)
@@ -215,7 +215,7 @@ class RangeEvaluation:
 
         pass # DONE
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description='RangeEvaluation: evaluate and estimated and true pairwise ranges')
     parser.add_argument('--fn_gt', help='input ground-truth trajectory CSV file', default="not specified")
@@ -247,8 +247,8 @@ if __name__ == "__main__":
     parser.add_argument('--plot_histograms', action='store_true', default=False)
     tp_start = time.time()
     args = parser.parse_args()
-    cfg = AssociateRangesCfg(UWB_ID1=None,
-                             UWB_ID2=None,
+    cfg = AssociateRangesCfg(ID1=None,
+                             ID2=None,
                              relative_timestamps=args.relative_timestamps,
                              max_difference=float(args.max_timestamp_difference),
                              subsample=int(args.subsample),
@@ -280,3 +280,8 @@ if __name__ == "__main__":
 
     print(" ")
     print("finished after [%s sec]\n" % str(time.time() - tp_start))
+    pass
+
+if __name__ == "__main__":
+    main()
+    pass

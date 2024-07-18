@@ -110,8 +110,8 @@ class RangeEvaluationTool:
 
 
         # 4) evaluate the ranges
-        cfg = AssociateRangesCfg(UWB_ID1=None,
-                                 UWB_ID2=None,
+        cfg = AssociateRangesCfg(ID1=None,
+                                 ID2=None,
                                  relative_timestamps=False,
                                  max_difference=0.03,
                                  subsample=0,
