@@ -43,8 +43,8 @@ class AssociateRangesCfg:
     max_range = 30
     range_error_val = 0
     label_timestamp = 't'
-    label_ID1 = 'UWB_ID1'
-    label_ID2 = 'UWB_ID2'
+    label_ID1 = 'ID1'
+    label_ID2 = 'ID2'
     label_range = 'range_raw'
     def __init__(self, ID1=None, ID2=None, relative_timestamps=False,
                  max_difference=0.02, subsample=0, verbose=False, remove_outliers=False,
@@ -270,7 +270,7 @@ class AssociateRanges:
         ax.legend()
         return fig, ax
 
-    def compute_error(self, sort=False, remove_outlier=True, max_error=None):
+    def compute_range_error(self, sort=False, remove_outlier=True, max_error=None):
         if not self.data_loaded:
             return
         if version_info[0] < 3:
@@ -345,7 +345,7 @@ class AssociateRanges:
         if cfg_title:
             ax.set_title(cfg_title)
 
-        [t_vec, r_vec_err] = self.compute_error(sort=sorted, remove_outlier=remove_outlier)
+        [t_vec, r_vec_err] = self.compute_range_error(sort=sorted, remove_outlier=remove_outlier)
         if not sorted:
             AssociateRanges.ax_plot_n_dim(ax, t_vec, r_vec_err, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
             ax.grid()
@@ -375,7 +375,7 @@ class AssociateRanges:
         if ax is None:
             ax = fig.add_subplot(111)
 
-        [t_vec, r_vec_err] = self.compute_error(sort=True, remove_outlier=True, max_error=max_error)
+        [t_vec, r_vec_err] = self.compute_range_error(sort=True, remove_outlier=True, max_error=max_error)
         num_bins = 50
         n, bins, patches = ax.hist(r_vec_err, num_bins, density=True, color='red', alpha=0.75, label='Histogram')
 
