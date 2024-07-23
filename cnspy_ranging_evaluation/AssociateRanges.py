@@ -368,7 +368,8 @@ class AssociateRanges:
         return fig, ax, stat, r_vec_err
 
     def plot_range_error_histogram(self, cfg_dpi=200, fig=None, ax=None,
-                                   save_fn="", result_dir=".", max_error=None, filter_histogramm=False, perc_inliers = 0.3):
+                                   save_fn="", result_dir=".", max_error=None, filter_histogramm=False, perc_inliers = 0.3,
+                                   ID1=None, ID2=None):
         if not self.data_loaded:
             return fig, ax, None, None
 
@@ -376,6 +377,11 @@ class AssociateRanges:
             fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
         if ax is None:
             ax = fig.add_subplot(111)
+
+        if ID1 is None:
+            ID1 = self.cfg.ID1
+        if ID2 is None:
+            ID2 = self.cfg.ID2
 
         [t_vec, r_vec_err] = self.compute_range_error(sort=True, remove_outlier=True, max_error=max_error)
         num_bins = 50
@@ -396,7 +402,7 @@ class AssociateRanges:
             ax.plot(bins, y*scaling, '--', color='blue', alpha=0.75, label='PDF')
             ax.set_ylabel('num. samples normalized')
             ax.set_xlabel('error [m]')
-            ax.set_title(r'Range Error Histogram ' + str(self.cfg.ID1) + '-' + str(self.cfg.ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+            ax.set_title(r'Range Error Histogram ID' + str(ID1) + '-ID' + str(ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
             ax.legend()
             return fig, ax, stat, r_vec_err
         else:
@@ -431,7 +437,7 @@ class AssociateRanges:
             ax.plot(bins_, y*scaling, '--', color='green', label='PDF (filtered)')
             ax.set_ylabel('num. samples normalized')
             ax.set_xlabel('error [m]')
-            ax.set_title(r'Range Error Histogram (filtered) ' + str(self.cfg.ID1) + '-' + str(self.cfg.ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+            ax.set_title(r'Range Error Histogram (filtered) ID' + str(ID1) + '-ID' + str(ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
             ax.legend()
             return fig, ax, stat, r_filtered_err
         pass
