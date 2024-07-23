@@ -155,10 +155,10 @@ class RangeEvaluation:
                     cnspy_numpy_utils.numpy_statistics.print_statistics(stat, desc=cfg_title + " error")
                 if plot_histogram:
                     ax_h = fig_h.add_subplot(n_rows, n_cols, idx)
-                    [fig_, ax_, stat, r_vec_err_] = assoc.plot_error_histogram(fig=fig_h,
-                                                                                ax=ax_h,
-                                                                                max_error=1,
-                                                                                filter_histogramm=filter_histogram)
+                    [fig_, ax_, stat, r_vec_err_] = assoc.plot_range_error_histogram(fig=fig_h,
+                                                                                     ax=ax_h,
+                                                                                     max_error=1,
+                                                                                     filter_histogramm=filter_histogram)
                     dict_statistics_i['contant_bias_table'][UWB_ID2] = round(float(stat['mean']),2)
                     dict_statistics_i['noise_table'][UWB_ID2] = round(float(stat['std']),2)
 

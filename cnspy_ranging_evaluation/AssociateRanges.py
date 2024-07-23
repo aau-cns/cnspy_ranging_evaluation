@@ -41,6 +41,7 @@ class AssociateRangesCfg:
     verbose = False
     remove_outliers = False,
     max_range = 30
+    max_range_error = 10
     range_error_val = 0
     label_timestamp = 't'
     label_ID1 = 'ID1'
@@ -111,7 +112,7 @@ class AssociateRanges:
 
         if cfg.remove_outliers:
             self.csv_df_est[cfg.label_range] = self.csv_df_est[cfg.label_range].where(
-                abs(self.csv_df_est[cfg.label_range]) < 0, other=cfg.range_error_val)
+                self.csv_df_est[cfg.label_range] < 0, other=cfg.range_error_val)
             self.csv_df_est[cfg.label_range] = self.csv_df_est[cfg.label_range].where(
                 self.csv_df_est[cfg.label_range] > cfg.max_range, other=cfg.range_error_val)
 
@@ -366,10 +367,11 @@ class AssociateRanges:
         stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_vec_err)))
         return fig, ax, stat, r_vec_err
 
-    def plot_error_histogram(self, cfg_dpi=200, fig=None, ax=None,
-                         save_fn="", result_dir=".", max_error=None, filter_histogramm=False, perc_inliers = 0.3):
+    def plot_range_error_histogram(self, cfg_dpi=200, fig=None, ax=None,
+                                   save_fn="", result_dir=".", max_error=None, filter_histogramm=False, perc_inliers = 0.3):
         if not self.data_loaded:
-            return
+            return fig, ax, None, None
+
         if fig is None:
             fig = plt.figure(figsize=(20, 15), dpi=int(cfg_dpi))
         if ax is None:
@@ -394,7 +396,7 @@ class AssociateRanges:
             ax.plot(bins, y*scaling, '--', color='blue', alpha=0.75, label='PDF')
             ax.set_ylabel('num. samples normalized')
             ax.set_xlabel('error [m]')
-            ax.set_title(r'Histogram ' + str(self.cfg.ID1) + '-' + str(self.cfg.ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+            ax.set_title(r'Range Error Histogram ' + str(self.cfg.ID1) + '-' + str(self.cfg.ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
             ax.legend()
             return fig, ax, stat, r_vec_err
         else:
@@ -429,7 +431,7 @@ class AssociateRanges:
             ax.plot(bins_, y*scaling, '--', color='green', label='PDF (filtered)')
             ax.set_ylabel('num. samples normalized')
             ax.set_xlabel('error [m]')
-            ax.set_title(r'Histogram (filtered) ' + str(self.cfg.ID1) + '-' + str(self.cfg.ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+            ax.set_title(r'Range Error Histogram (filtered) ' + str(self.cfg.ID1) + '-' + str(self.cfg.ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
             ax.legend()
             return fig, ax, stat, r_filtered_err
         pass
