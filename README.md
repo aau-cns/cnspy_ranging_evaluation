@@ -276,3 +276,9 @@ rel_tag_positions: {0:[-0.09, 0.04, -0.045]}
 abs_anchor_positions: {1:[-1.306, -4.146, 0.662], 2:[1.748,-4.173,1.878], 3:[2.928,2.47,2.153]}
 
 ```
+
+## License
+
+Software License Agreement (GNU GPLv3  License), refer to the LICENSE file.
+
+*Sharing is caring!* - [Roland Jung](https://github.com/jungr-ait)  
