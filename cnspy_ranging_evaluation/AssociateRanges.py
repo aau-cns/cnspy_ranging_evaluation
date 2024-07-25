@@ -84,11 +84,12 @@ class AssociateRanges:
         pass
 
     def __init__(self, fn_gt, fn_est, cfg):
+        assert (isinstance(cfg, AssociateRangesCfg))
         self.cfg = cfg
         self.load(fn_gt, fn_est, cfg)
 
     def load(self, fn_gt, fn_est, cfg):
-
+        assert (isinstance(cfg, AssociateRangesCfg))
         assert (os.path.exists(fn_gt)), str("Path to fn_gt does not exist!:" + str(fn_gt))
         assert (os.path.exists((fn_est))), str("Path to fn_est does not exist!:" + str(fn_est))
 
@@ -111,10 +112,14 @@ class AssociateRanges:
                 return
 
         if cfg.remove_outliers:
-            self.csv_df_est[cfg.label_range] = self.csv_df_est[cfg.label_range].where(
-                self.csv_df_est[cfg.label_range] < 0, other=cfg.range_error_val)
-            self.csv_df_est[cfg.label_range] = self.csv_df_est[cfg.label_range].where(
-                self.csv_df_est[cfg.label_range] > cfg.max_range, other=cfg.range_error_val)
+            indices1 = np.nonzero(self.csv_df_est[cfg.label_range] < self.cfg.max_range)
+            indices2 = np.nonzero(self.csv_df_est[cfg.label_range] > 0)
+            idc = np.intersect1d(indices1, indices2)
+            num_outliers = len(self.csv_df_est.index) - len(idc)
+            perc = 100.0*(num_outliers / max(1, len(self.csv_df_est.index)))
+            if num_outliers:
+                self.csv_df_est = AssociateRanges.sample_DataFrame(self.csv_df_est, np.intersect1d(indices1, indices2))
+                print('AssociateRanges.load(): [%d] outliers (%.1f %%) removed!' % (num_outliers, perc))
 
         else:
             indices = ((self.csv_df_est[cfg.label_range]) < 0)
@@ -292,40 +297,22 @@ class AssociateRanges:
             # if r_est = r_true + r_err, then  r_err is an offset or the constant bias (gamma).
             r_vec_err = r_vec_est - r_vec_gt
             t_vec = t_vec_gt
-            if remove_outlier:
-                if not self.cfg.remove_outliers:
-                    indices = np.nonzero((r_vec_est == self.cfg.range_error_val))
-                else:
-                    indices = np.nonzero((abs(r_vec_est) > self.cfg.max_range))
 
+            if max_error:
+                indices = np.nonzero((abs(r_vec_err) > max_error))
                 t_vec = np.delete(t_vec, indices, axis=0, )
                 r_vec_err = np.delete(r_vec_err, indices, axis=0)
 
-                if max_error:
-                    indices = np.nonzero((abs(r_vec_err) > max_error))
-                    t_vec = np.delete(t_vec, indices, axis=0, )
-                    r_vec_err = np.delete(r_vec_err, indices, axis=0)
-
-                return [t_vec, r_vec_err]
+            return [t_vec, r_vec_err]
         else:
             # if r_est = r_true + r_err, then  r_err is an offset or the constant bias (gamma).
             r_vec_err = r_vec_est - r_vec_gt
             x_arr = r_vec_gt
-            if remove_outlier:
-                if not self.cfg.remove_outliers and not max_error:
-                    indices = np.nonzero((r_vec_est == self.cfg.range_error_val))
-                else:
-                    indices = np.nonzero((abs(r_vec_est) > self.cfg.max_range))
 
+            if max_error:
+                indices = np.nonzero((abs(r_vec_err) > max_error))
                 x_arr = np.delete(x_arr, indices, axis=0, )
                 r_vec_err = np.delete(r_vec_err, indices, axis=0)
-
-                if max_error:
-                    indices = np.nonzero((abs(r_vec_err) > max_error))
-                    x_arr = np.delete(x_arr, indices, axis=0, )
-                    r_vec_err = np.delete(r_vec_err, indices, axis=0)
-
-
 
             gt_indices_sorted = np.argsort(x_arr, axis=0)
             #x_arr = range(len(r_vec_gt))
