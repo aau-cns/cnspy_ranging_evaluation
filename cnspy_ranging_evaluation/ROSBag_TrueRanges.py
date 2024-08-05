@@ -31,106 +31,15 @@ import numpy as np
 from numpy import linalg as LA, number
 from spatialmath import UnitQuaternion, SO3, SE3, Quaternion, base
 from spatialmath.base.quaternions import qslerp
+from cnspy_ranging_evaluation.ROSBag_Pose import ROSBag_Pose
 
-from std_msgs.msg import Header, Time
-from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TransformStamped
-
-
-def get_key_from_value(d, val):
-    keys = [k for k, v in d.items() if v == val]
-    if keys:
-        return keys[0]
-    return None
-
-
-class HistoryBuffer:
-    t_vec = []
-    val_vec = []
-
-    def __init__(self, dict_t=None):
-        if dict_t is not None:
-            self.set_dict(dict_t)
-
-    def set_dict(self, dict_t):
-        self.t_vec = []
-        self.val_vec = []
-        for key, val in dict_t.items():
-            self.t_vec.append(key)
-            self.val_vec.append(val)
-
-    def set(self, t_vec_, val_vec_):
-        assert (len(t_vec_) == len(val_vec_))
-        idx = 0
-        # sort values
-        dict_t = dict()
-        for t_ in self.t_vec:
-            dict_t[t_] = val_vec_[idx]
-            idx += 1
-
-        self.set_dict(dict_t)
-
-    def get_idx_before_t(self, t):
-        idx = 0
-        for t_ in self.t_vec:
-            if t_ >= t:
-                # if idx = 0:  not in list
-                return idx - 1
-            idx += 1
-        # not in list
-        return -1
-
-    def get_idx_after_t(self, t):
-        idx = 0
-        for t_ in self.t_vec:
-            if t_ >= t:
-                return idx
-            idx += 1
-        # not in list
-        return -1
-
-    def get_idx_at_t(self, t):
-        idx = 0
-        for t_ in self.t_vec:
-            if t_ == t:
-                return max(0, idx)
-            idx += 1
-        # not in list
-        return -1
-
-    def exists_at_t(self, t):
-        try:
-            return self.t_vec.index(t)
-        finally:
-            return None
-
-    def get_before_t(self, t):
-        idx = self.get_idx_before_t(t)
-        if idx != -1 and idx < len(self.t_vec):
-            return [self.t_vec[idx], self.val_vec[idx]]
-        else:
-            return [None, None]
-        pass
-
-    def get_at_t(self, t):
-        idx = self.get_idx_at_t(t)
-        if idx != -1 and idx < len(self.t_vec):
-            return [self.t_vec[idx], self.val_vec[idx]]
-        else:
-            return [None, None]
-        pass
-
-    def get_after_t(self, t):
-        idx = self.get_idx_after_t(t)
-        if idx != -1 and idx < len(self.t_vec):
-            return [self.t_vec[idx], self.val_vec[idx]]
-        else:
-            return [None, None]
-        pass
 
 
 class ROSbag_TrueRanges:
     def __init__(self):
         pass
+
+
 
     @staticmethod
     def extract(bagfile_in_name,
@@ -256,54 +165,8 @@ class ROSbag_TrueRanges:
         if verbose:
             print("\nROSbag_TrueRanges: num messages " + str(num_messages))
 
-        dict_poses = dict()
-        round_decimals = 6
-        ## extract the desired topics from the BAG file
-        try:  # else already exists
-            print("ROSbag_TrueRanges: extracting poses...")
-            cnt_poses = 0
-            for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
-                if topic == topic_pose:
-                    T_GLOBAL_BODY = None
-                    if hasattr(msg, 'header') and hasattr(msg, 'pose'):  # POSE_STAMPED
-                        t = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
-                        q_GB = [msg.pose.orientation.w, msg.pose.orientation.x, msg.pose.orientation.y,
-                                msg.pose.orientation.z]
-
-                        q = UnitQuaternion(q_GB, norm=True)
-                        T_GLOBAL_BODY = SE3.Rt(q.R, t, check=True)
-                        pass
-                    elif hasattr(msg, 'header') and hasattr(msg, 'transform'):
-                        t = np.array(
-                            [msg.transform.translation.x, msg.transform.translation.y, msg.transform.translation.z])
-                        q_GB = [msg.transform.rotation.w, msg.transform.rotation.x, msg.transform.rotation.y,
-                                msg.transform.rotation.z]
-                        q = UnitQuaternion(q_GB, norm=True)
-                        T_GLOBAL_BODY = SE3.Rt(q.R, t, check=True)
-                    else:
-                        print("\nROSbag_TrueRanges: unsupported message " + str(msg))
-                        continue
-
-                    if T_GLOBAL_BODY is not None:
-                        timestamp = round(msg.header.stamp.to_sec(), round_decimals)
-                        dict_poses[timestamp] = T_GLOBAL_BODY
-                        cnt_poses = cnt_poses + 1
-                        pass
-                pass
-
-            if cnt_poses == 0:
-                print("\nROSbag_TrueRanges: no poses obtained!")
-                return False
-            else:
-                print("\nROSbag_TrueRanges: poses extractd: " + str(cnt_poses))
-
-        except AssertionError as error:
-            print(error)
-            print(
-                "ROSbag_TrueRanges: Unexpected error while reading the bag file!\n * try: $ rosbag fix <bagfile> <fixed>")
-            return False
-
-        hist_poses = HistoryBuffer(dict_t=dict_poses)
+        round_decimals=6
+        hist_poses = ROSBag_Pose.extract(bag, num_messages, topic_pose=topic_pose, round_decimals=round_decimals)
 
         noise_range_arr = np.random.normal(0, stddev_range, size=num_messages)  # 1000 samples with normal distribution
 

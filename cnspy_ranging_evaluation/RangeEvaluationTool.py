@@ -170,6 +170,9 @@ def main():
                                  show_plot=args.show_plot,
                                  verbose=args.verbose)
     pass
+    print(" ")
+    print("finished after [%s sec]\n" % str(time.time() - tp_start))
+    pass
 
 
 if __name__ == "__main__":
