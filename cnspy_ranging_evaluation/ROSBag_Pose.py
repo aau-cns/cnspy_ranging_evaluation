@@ -33,6 +33,21 @@ from cnspy_ranging_evaluation.HistoryBuffer import HistoryBuffer, get_key_from_v
 class ROSBag_Pose:
     @staticmethod
     def extract_pose(bag, num_messages, topic_pose_body, round_decimals=6, T_BODY_SENSOR=None) -> HistoryBuffer:
+        """
+        Parameters
+        ----------
+        bag: file handle to the rosbag
+        num_messages: number of messages contained in the bag file
+        topic_pose_body: topic name of body pose
+        round_decimals (optional): integer > 1
+        T_BODY_SENSOR(optional): SE3 pose from Body to Sensor
+
+        Returns HistoryBuffer
+        -------
+        """
+        if round_decimals < 1:
+            round_decimals = 1
+
         hist_poses = dict()
         ## extract the desired topics from the BAG file
         try:  # else already exists
@@ -93,6 +108,23 @@ class ROSBag_Pose:
 
     @staticmethod
     def extract_poses(bag, num_messages, dict_topic_pose_body, dict_senor_topic_pose, round_decimals=6, dict_T_BODY_SENSOR=None) -> dict:
+        """
+        Parameters
+        ----------
+        bag: file handle to the rosbag
+        num_messages: number of messages contained in the bag file
+        dict_topic_pose_body: topic names of Body poses
+        dict_senor_topic_pose: topic names for the final Sensor pose history
+        round_decimals (optional): integer > 1
+        dict_T_BODY_SENSOR (optional): SE3 pose from Body to Sensor: T_GLOBAL_SENSOR(t) = T_GLOBAL_BODY(t) * T_BODY_SENSOR
+
+        Returns  a dictionary of HistoryBuffer: dict<senor_topic, HistoryBuffer<T_GLOBAL_SENSOR(t)>>
+        -------
+        """
+        if round_decimals < 1:
+            round_decimals = 1
+
+
         dict_hist_poses = dict()  # map<topic<timestamp, SE3>>
         for id_, topic_ in dict_senor_topic_pose.items():
             dict_hist_poses[topic_] = dict()
