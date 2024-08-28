@@ -26,7 +26,7 @@ def get_key_from_value(d, val):
     return None
 
 
-
+# TODO: move to trajectory package
 class HistoryBuffer:
     t_vec = []
     val_vec = []
@@ -42,13 +42,13 @@ class HistoryBuffer:
             self.t_vec.append(key)
             self.val_vec.append(val)
 
-    def set(self, t_vec_, val_vec_):
+    def set(self, t_vec_, val_vec_, round_decimals = 6):
         assert (len(t_vec_) == len(val_vec_))
         idx = 0
         # sort values
         dict_t = dict()
-        for t_ in self.t_vec:
-            dict_t[t_] = val_vec_[idx]
+        for t_ in t_vec_:
+            dict_t[round(t_, round_decimals)] = val_vec_[idx]
             idx += 1
 
         self.set_dict(dict_t)
@@ -66,7 +66,7 @@ class HistoryBuffer:
     def get_idx_after_t(self, t):
         idx = 0
         for t_ in self.t_vec:
-            if t_ >= t:
+            if t_ > t:
                 return idx
             idx += 1
         # not in list
