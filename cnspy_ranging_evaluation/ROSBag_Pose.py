@@ -18,16 +18,12 @@
 # BASED ON: https://github.com/aau-cns/cnspy_rosbag2csv
 # just install "pip install cnspy-rosbag2csv"
 ########################################################################################################################
-
-import rosbag
+import yaml
 from tqdm import tqdm
 import numpy as np
-from spatialmath import UnitQuaternion, SO3, SE3, Quaternion, base
+from spatialmath import UnitQuaternion, SE3
 
-
-from std_msgs.msg import Header, Time
-from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TransformStamped
-from cnspy_ranging_evaluation.HistoryBuffer import HistoryBuffer, get_key_from_value
+from cnspy_trajectory.HistoryBuffer import HistoryBuffer, get_key_from_value
 
 
 class ROSBag_Pose:
@@ -107,7 +103,7 @@ class ROSBag_Pose:
         return HistoryBuffer(dict_t=hist_poses)
 
     @staticmethod
-    def extract_poses(bag, num_messages, dict_topic_pose_body, dict_senor_topic_pose, round_decimals=6, dict_T_BODY_SENSOR=None) -> dict:
+    def extract_poses(bag, dict_topic_pose_body, dict_senor_topic_pose, num_messages=None, round_decimals=6, dict_T_BODY_SENSOR=None) -> dict:
         """
         Parameters
         ----------
@@ -121,6 +117,9 @@ class ROSBag_Pose:
         Returns  a dictionary of HistoryBuffer: dict<senor_topic, HistoryBuffer<T_GLOBAL_SENSOR(t)>>
         -------
         """
+        if num_messages is None:
+            info_dict = yaml.load(bag._get_yaml_info(), Loader=yaml.FullLoader)
+            num_messages = info_dict['messages']
         if round_decimals < 1:
             round_decimals = 1
 
@@ -189,9 +188,10 @@ class ROSBag_Pose:
                 "ROSBag_Pose: Unexpected error while reading the bag file!\n * try: $ rosbag fix <bagfile> <fixed>")
             return None
 
-        ## convert poses to History
+        ## convert poses to History only if poses exist in bag file.
         dict_history = dict() # map<topic, history>
         for topic_sensor, hist_poses in dict_hist_poses.items():
-            dict_history[topic_sensor] = HistoryBuffer(dict_t=hist_poses)
+            if len(hist_poses):
+                dict_history[topic_sensor] = HistoryBuffer(dict_t=hist_poses)
 
         return dict_history

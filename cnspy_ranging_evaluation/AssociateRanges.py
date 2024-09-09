@@ -276,7 +276,7 @@ class AssociateRanges:
         ax.legend()
         return fig, ax
 
-    def compute_range_error(self, sort=False, remove_outlier=True, max_error=None):
+    def get_range_error(self, sort=False, remove_outlier=True, max_error=None):
         if not self.data_loaded:
             return
         if version_info[0] < 3:
@@ -333,7 +333,7 @@ class AssociateRanges:
         if cfg_title:
             ax.set_title(cfg_title)
 
-        [t_vec, r_vec_err] = self.compute_range_error(sort=sorted, remove_outlier=remove_outlier)
+        [t_vec, r_vec_err] = self.get_range_error(sort=sorted, remove_outlier=remove_outlier)
         if not sorted:
             AssociateRanges.ax_plot_n_dim(ax, t_vec, r_vec_err, colors=[colors[0]], labels=[labels[0]], ls=ls_vec[0])
             ax.grid()
@@ -370,7 +370,7 @@ class AssociateRanges:
         if ID2 is None:
             ID2 = self.cfg.ID2
 
-        [t_vec, r_vec_err] = self.compute_range_error(sort=True, remove_outlier=True, max_error=max_error)
+        [t_vec, r_vec_err] = self.get_range_error(sort=True, remove_outlier=True, max_error=max_error)
         num_bins = 50
         n, bins, patches = ax.hist(r_vec_err, num_bins, density=True, color='red', alpha=0.75, label='Histogram')
 
@@ -416,7 +416,7 @@ class AssociateRanges:
             stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_filtered_err)))
             num_plot_bins = int(num_bins*(perc_inliers))
             n_, bins_, patches_ = ax.hist(r_filtered_err, num_plot_bins, density=True, color='blue', alpha=0.75, label='Histogram (filtered)')
-            sigma = stat['std']
+            sigma = max(0.001, stat['std'])
             mu = stat['mean']
             scaling = 1.0; #len(r_filtered_err)/num_plot_bins
             y = ((1 / (np.sqrt(2 * np.pi) * sigma)) *
@@ -529,7 +529,16 @@ class AssociateRanges:
                 os.makedirs(result_dir)
 
             filename = os.path.join(result_dir, save_fn) + ".png"
+
+            # create directories for files
             print("save to file: " + filename)
+            [root, ext] = os.path.splitext(filename)
+            [head, tail] = os.path.split(root)
+            try:  # else already exists
+                os.makedirs(head)
+            except:
+                pass
+
             #plt.savefig(fig=fig, fname=filename, dpi=float(dpi), format="png")
             fig.savefig(filename, dpi=float(dpi), format='png')
             print("save to file done...")
