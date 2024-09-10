@@ -18,20 +18,18 @@
 # BASED ON: https://github.com/aau-cns/cnspy_rosbag2csv
 # just install "pip install cnspy-rosbag2csv"
 ########################################################################################################################
-from docutils.nodes import topic
 
 import rosbag
 import time
 import os
 import argparse
 import yaml
-import csv
 from tqdm import tqdm
 import numpy as np
-from numpy import linalg as LA, number
-from spatialmath import UnitQuaternion, SO3, SE3, Quaternion, base
+from numpy import linalg as LA
+from spatialmath import UnitQuaternion, SO3, SE3
 from spatialmath.base.quaternions import qslerp
-from cnspy_ranging_evaluation.ROSBag_Pose import ROSBag_Pose
+from cnspy_trajectory.ROSBag_Pose import ROSBag_Pose
 
 
 

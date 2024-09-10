@@ -11,7 +11,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='cnspy_ranging_evaluation',
-    version="0.2.8",
+    version="0.2.9",
     author='Roland Jung',
     author_email='roland.jung@aau.at',
     description='Evaluation of range measurements.',
@@ -31,7 +31,16 @@ setup(
 
     packages=find_packages(exclude=["test_*", "TODO*"]),
     python_requires='>=3.6',
-    install_requires=['numpy', 'pandas', 'spatialmath-python', 'scipy', 'matplotlib', 'joblib', 'configparser', 'cnspy_numpy_utils', 'cnspy_timestamp_association' ],
+    install_requires=['numpy',
+                      'pandas',
+                      'spatialmath-python',
+                      'scipy',
+                      'matplotlib',
+                      'joblib',
+                      'configparser',
+                      'cnspy_numpy_utils',
+                      'cnspy_timestamp_association',
+                      'cnspy_trajectory>=0.2.10'],
     entry_points={
         'console_scripts': [
             'CSV_StaticBiasAnalysis = cnspy_ranging_evaluation.CSV_StaticBiasAnalysis:main',
