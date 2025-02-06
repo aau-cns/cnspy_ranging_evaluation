@@ -98,7 +98,7 @@ class TWR_ROSbag2CSV:
         idx = 0
         for topicName in topic_list:
 
-            if topicName[0] != '/':
+            if topicName != "" and topicName[0] != '/':
                 print("TWR_ROSbag2CSV: Not a proper topic name: %s (should start with /)" % topicName)
                 continue
 
@@ -129,6 +129,8 @@ class TWR_ROSbag2CSV:
         bag_topics = info_dict['topics']
         for topicName in topic_list:
             found = False
+            if topicName == "":
+                continue
             for topic_info in bag_topics:
                 if topic_info['topic'] == topicName:
                     found = True
@@ -232,7 +234,7 @@ class TWR_ROSbag2CSV:
             print("* filename_list: " + str(filename))
 
         for topicName in topic_list:
-            if topicName[0] != '/':
+            if topicName != '' and topicName[0] != '/':
                 print("TWR_ROSbag2CSV: Not a proper topic name: %s (should start with /)" % topicName)
                 continue
 
@@ -252,12 +254,13 @@ class TWR_ROSbag2CSV:
         bag_topics = info_dict['topics']
         for topicName in topic_list:
             found = False
-            for topic_info in bag_topics:
-                if topic_info['topic'] == topicName:
-                    found = True
+            if topicName != "":
+                for topic_info in bag_topics:
+                    if topic_info['topic'] == topicName:
+                        found = True
 
-            if not found:
-                print("# WARNING: desired topic [" + str(topicName) + "] is not in bag file!")
+                if not found:
+                    print("# WARNING: desired topic [" + str(topicName) + "] is not in bag file!")
 
         if verbose:
             print("\nTWR_ROSbag2CSV: num messages " + str(num_messages))

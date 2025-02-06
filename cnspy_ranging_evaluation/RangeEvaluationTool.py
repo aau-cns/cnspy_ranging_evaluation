@@ -67,8 +67,11 @@ class RangeEvaluationTool:
             topic_list.append(val)
             UWB_ID1_arr.append(int(key))
         for key, val in dict_cfg["anchor_topics"].items():
-            topic_list.append(val)
+            if val != "" and val != "/":
+                topic_list.append(val)
             UWB_ID1_arr.append(int(key))
+
+        topic_list = list(set(topic_list))
 
         if verbose:
             print("* topic_list= " + str(topic_list))
