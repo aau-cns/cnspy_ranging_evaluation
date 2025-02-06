@@ -117,12 +117,18 @@ class RangeEvaluation:
                 pass
 
             n = len(UWB_ID2_arr)
-            sqrt_n = math.floor(math.sqrt(n))
+            if UWB_ID1 in UWB_ID2_arr:
+                n = n - 1
+
+            sqrt_n = max(1, math.ceil(math.sqrt(n)))
             n_rows = sqrt_n
-            if sqrt_n*sqrt_n < n:
-                n_cols = sqrt_n+1
+            if sqrt_n * sqrt_n < n:
+                n_cols = sqrt_n + 1
             else:
                 n_cols = sqrt_n
+
+            if n_rows * n_cols <= n:
+                assert(False, "something went wrong!")
 
             idx = 1
             for UWB_ID2 in UWB_ID2_arr:
@@ -134,6 +140,10 @@ class RangeEvaluation:
                 cfg_title = str("ID" + str(UWB_ID1) + " to ID" + str(UWB_ID2))
                 assoc = AssociateRanges(fn_gt=fn_gt, fn_est=fn_est, cfg=cfg)
                 assoc.save(result_dir=result_dir, prefix=prefix+cfg_title)
+
+                if not assoc.data_loaded:
+                    print("RangeEvaluation: no data loaded for " + cfg_title)
+                    continue
 
                 if plot_timestamps:
                     ax_t = fig_t.add_subplot(n_rows, n_cols, idx)
@@ -159,11 +169,14 @@ class RangeEvaluation:
                                                                                      ax=ax_h,
                                                                                      max_error=1,
                                                                                      filter_histogramm=filter_histogram)
-                    dict_statistics_i['contant_bias_table'][UWB_ID2] = round(float(stat['mean']),2)
-                    dict_statistics_i['noise_table'][UWB_ID2] = round(float(stat['std']),2)
+                    if stat:
+                        dict_statistics_i['contant_bias_table'][UWB_ID2] = round(float(stat['mean']),2)
+                        dict_statistics_i['noise_table'][UWB_ID2] = round(float(stat['std']),2)
 
                 # the histogram of the date
                 idx += 1
+
+                pass
             if verbose:
                 print("* RangeEvaluation(): ranges associated!")
 

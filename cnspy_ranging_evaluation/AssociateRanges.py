@@ -413,19 +413,22 @@ class AssociateRanges:
                                        (r_vec_err < (mean_best_errors + 2.0*max_offset_errors))]
 
             # add a 'best fit' line
-            stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_filtered_err)))
-            num_plot_bins = int(num_bins*(perc_inliers))
-            n_, bins_, patches_ = ax.hist(r_filtered_err, num_plot_bins, density=True, color='blue', alpha=0.75, label='Histogram (filtered)')
-            sigma = max(0.001, stat['std'])
-            mu = stat['mean']
-            scaling = 1.0; #len(r_filtered_err)/num_plot_bins
-            y = ((1 / (np.sqrt(2 * np.pi) * sigma)) *
-                 np.exp(-0.5 * (1 / sigma * (bins_ - mu)) ** 2))
-            ax.plot(bins_, y*scaling, '--', color='green', label='PDF (filtered)')
-            ax.set_ylabel('num. samples normalized')
-            ax.set_xlabel('error [m]')
-            ax.set_title(r'Range Error Histogram (filtered) ID' + str(ID1) + '-ID' + str(ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
-            ax.legend()
+            if len(r_filtered_err) > 1:
+                stat = numpy_statistics(vNumpy=np.squeeze(np.asarray(r_filtered_err)))
+                num_plot_bins = int(num_bins*(perc_inliers))
+                n_, bins_, patches_ = ax.hist(r_filtered_err, num_plot_bins, density=True, color='blue', alpha=0.75, label='Histogram (filtered)')
+                sigma = max(0.001, stat['std'])
+                mu = stat['mean']
+                scaling = 1.0  #len(r_filtered_err)/num_plot_bins
+                y = ((1 / (np.sqrt(2 * np.pi) * sigma)) *
+                     np.exp(-0.5 * (1 / sigma * (bins_ - mu)) ** 2))
+                ax.plot(bins_, y*scaling, '--', color='green', label='PDF (filtered)')
+                ax.set_ylabel('num. samples normalized')
+                ax.set_xlabel('error [m]')
+                ax.set_title(r'Range Error Histogram (filtered) ID' + str(ID1) + '-ID' + str(ID2) + ': $\mu$=' + str(round(mu, 3)) + ', $\sigma$=' + str(round(sigma, 3)))
+                ax.legend()
+            else:
+                stat = None
             return fig, ax, stat, r_filtered_err
         pass
 
