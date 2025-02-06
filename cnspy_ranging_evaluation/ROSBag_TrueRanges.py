@@ -31,7 +31,7 @@ from spatialmath import UnitQuaternion, SO3, SE3
 from spatialmath.base.quaternions import qslerp
 from cnspy_trajectory.ROSBag_Pose import ROSBag_Pose
 
-
+from cnspy_trajectory.HistoryBuffer import get_key_from_value
 
 class ROSbag_TrueRanges:
     def __init__(self):
@@ -154,17 +154,18 @@ class ROSbag_TrueRanges:
                 print("# WARNING: desired topic [" + str(val) + "] is not in bag file!")
         for key, val in dict_cfg["anchor_topics"].items():
             found = False
-            for topic_info in bag_topics:
-                if topic_info['topic'] == val:
-                    found = True
-            if not found:
-                print("# WARNING: desired topic [" + str(val) + "] is not in bag file!")
+            if val != "":
+                for topic_info in bag_topics:
+                    if topic_info['topic'] == val:
+                        found = True
+                if not found:
+                    print("# WARNING: desired topic [" + str(val) + "] is not in bag file!")
 
         if verbose:
             print("\nROSbag_TrueRanges: num messages " + str(num_messages))
 
         round_decimals=6
-        hist_poses = ROSBag_Pose.extract(bag, num_messages, topic_pose=topic_pose, round_decimals=round_decimals)
+        hist_poses = ROSBag_Pose.extract_pose(bag, num_messages, topic_pose_body=topic_pose, round_decimals=round_decimals)
 
         noise_range_arr = np.random.normal(0, stddev_range, size=num_messages)  # 1000 samples with normal distribution
 
@@ -196,8 +197,8 @@ class ROSbag_TrueRanges:
                     if topic in dict_cfg["tag_topics"].values():
                         TAG_ID1 = get_key_from_value(dict_cfg["tag_topics"], topic)
                         text = str("topic: " + str(topic) + " has wrong expected tag id! expected=" + str(
-                            TAG_ID1) + " got=" + str(msg.ID1))
-                        assert (int(TAG_ID1) == int(msg.ID1)), text
+                            TAG_ID1) + " got=" + str(msg.UWB_ID1))
+                        assert (int(TAG_ID1) == int(msg.UWB_ID1)), text
 
                         t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
                         T_BODY_TAG1 = SE3()
@@ -252,8 +253,8 @@ class ROSbag_TrueRanges:
                         T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
 
                         # T2A
-                        if msg.ID2 in dict_cfg["abs_anchor_positions"].keys():
-                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.ID2])
+                        if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
+                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
                             t_TA = T_GLOBAL_TAG1.t - t_GA2
                             d_TA = LA.norm(t_TA)
                             msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
@@ -263,8 +264,8 @@ class ROSbag_TrueRanges:
                             cnt_T2A += 1
                             pass
                         # T2T
-                        elif msg.ID2 in dict_cfg["tag_topics"].keys():
-                            TAG_ID2 = msg.ID2
+                        elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
+                            TAG_ID2 = msg.UWB_ID2
                             t_bt2 = dict_cfg["rel_tag_positions"][TAG_ID2]
                             T_BODY_TAG2 = SE3(np.array(t_bt2))
                             T_GLOBAL_TAG2 = T_GLOBAL_BODY * T_BODY_TAG2
@@ -286,14 +287,14 @@ class ROSbag_TrueRanges:
 
                         ANCHOR_ID1 = get_key_from_value(dict_cfg["anchor_topics"], topic)
                         text = str("topic: " + str(topic) + " has wrong expected anchor id! expected=" + str(
-                            ANCHOR_ID1) + " got=" + str(msg.ID1))
-                        assert (int(ANCHOR_ID1) == int(msg.ID1)), text
+                            ANCHOR_ID1) + " got=" + str(msg.UWB_ID1))
+                        assert (int(ANCHOR_ID1) == int(msg.UWB_ID1)), text
 
                         t_GA1 = np.array(dict_cfg["abs_anchor_positions"][ANCHOR_ID1])
 
                         # A2A
-                        if msg.ID2 in dict_cfg["abs_anchor_positions"].keys():
-                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.ID2])
+                        if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
+                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
                             d_TA = LA.norm(t_GA1 - t_GA2)
                             msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
                             msg.range_corr = d_TA
@@ -302,8 +303,8 @@ class ROSbag_TrueRanges:
                             cnt_A2A += 1
                             pass
                         # A2T
-                        elif msg.ID2 in dict_cfg["tag_topics"].keys():
-                            TAG_ID1 = msg.ID2
+                        elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
+                            TAG_ID1 = msg.UWB_ID2
                             t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
                             T_BODY_TAG1 = SE3()
                             T_BODY_TAG1.t = (np.array(t_bt1))
