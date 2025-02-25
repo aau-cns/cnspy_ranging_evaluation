@@ -11,7 +11,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='cnspy_ranging_evaluation',
-    version="0.2.10",
+    version="0.2.11",
     author='Roland Jung',
     author_email='roland.jung@aau.at',
     description='Evaluation of range measurements.',
@@ -40,7 +40,7 @@ setup(
                       'configparser',
                       'cnspy_numpy_utils',
                       'cnspy_timestamp_association',
-                      'cnspy_trajectory>=0.2.10'],
+                      'cnspy_trajectory>=0.2.13'],
     entry_points={
         'console_scripts': [
             'CSV_StaticBiasAnalysis = cnspy_ranging_evaluation.CSV_StaticBiasAnalysis:main',
@@ -49,6 +49,7 @@ setup(
             'ROSBag_Pose2Ranges = cnspy_ranging_evaluation.ROSBag_Pose2Ranges:main',
             'ROSBag_TrueRanges = cnspy_ranging_evaluation.ROSBag_TrueRanges:main',
             'TWR_ROSbag2CSV = cnspy_ranging_evaluation.TWR_ROSbag2CSV:main',
+            'PlotTwoWayRanges = cnspy_ranging_evaluation.PlotTwoWayRanges:main',
         ],
     },
 )

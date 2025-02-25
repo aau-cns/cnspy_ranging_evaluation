@@ -38,6 +38,7 @@ pip3 install cnspy_ranging_evaluation
 * ROSBag_Pose2Ranges
 * ROSBag_TrueRanges
 * TWR_ROSbag2CSV 
+* PlotTwoWayRanges
 
 
 ## Usage
@@ -276,7 +277,25 @@ rel_tag_positions: {0:[-0.09, 0.04, -0.045]}
 abs_anchor_positions: {1:[-1.306, -4.146, 0.662], 2:[1.748,-4.173,1.878], 3:[2.928,2.47,2.153]}
 
 ```
+### PlotTwoWayRanges
+```commandline
+cnspy_ranging_evaluation$ python PlotTwoWayRanges.py -h
+usage: PlotTwoWayRanges.py [-h] [--filename FILENAME] [--result_dir RESULT_DIR] [--verbose] [--plot_ranges] [--plot_histograms] [--show_plots] [--save_plots] [--save_metrics]
 
+PlotTwoWayRanges: extract and store given topics of a rosbag into a CSV file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --filename FILENAME   csv filename
+  --result_dir RESULT_DIR
+                        directory to store results]
+  --verbose
+  --plot_ranges
+  --plot_histograms
+  --show_plots
+  --save_plots
+  --save_metrics
+```
 ## License
 
 Software License Agreement (GNU GPLv3  License), refer to the LICENSE file.

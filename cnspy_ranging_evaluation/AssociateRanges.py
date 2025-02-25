@@ -544,6 +544,9 @@ class AssociateRanges:
 
             #plt.savefig(fig=fig, fname=filename, dpi=float(dpi), format="png")
             fig.savefig(filename, dpi=float(dpi), format='png')
+
+            filename = os.path.join(result_dir, save_fn) + ".svg"
+            fig.savefig(filename, dpi=float(dpi), format='svg')
             print("save to file done...")
         if show:
             plt.show()
