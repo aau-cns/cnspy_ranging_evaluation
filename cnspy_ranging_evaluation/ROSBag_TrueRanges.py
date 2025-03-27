@@ -100,22 +100,18 @@ class ROSbag_TrueRanges:
 
             if "rel_tag_positions" not in dict_cfg:
                 print("[rel_tag_positions] does not exist in fn=" + cfg)
-                return False
             if "tag_topics" not in dict_cfg:
                 print("[tag_topics] does not exist in fn=" + cfg)
-                return False
             else:
                 for key, val in dict_cfg["tag_topics"].items():
                     tag_ids.append(int(key))
             if "anchor_topics" not in dict_cfg:
                 print("[anchor_topics] does not exist in fn=" + cfg)
-                return False
             if "abs_anchor_positions" not in dict_cfg:
                 print("[abs_anchor_positions] does not exist in fn=" + cfg)
-                return False
             # get the association between tag topics and the pose_topic(s)
             if "pose_topic" not in dict_cfg and "pose_topics" not in dict_cfg:
-                print("[pose_topic] or [pose_topics] does not exist in fn=" + cfg)
+                print("ERROR [pose_topic] or [pose_topics] does not exist in fn=" + cfg)
                 return False
             elif "pose_topic" in dict_cfg:
                 for key in tag_ids:
@@ -126,10 +122,14 @@ class ROSbag_TrueRanges:
 
         if verbose:
             print("configuration contains:")
-            print("* rel_tag_positions:" + str(dict_cfg["rel_tag_positions"]))
-            print("* tag_topics:" + str(dict_cfg["tag_topics"]))
-            print("* anchor_topics:" + str(dict_cfg["anchor_topics"]))
-            print("* abs_anchor_positions:" + str(dict_cfg["abs_anchor_positions"]))
+            if "rel_tag_positions" in dict_cfg:
+                print("* rel_tag_positions:" + str(dict_cfg["rel_tag_positions"]))
+            if "tag_topics" in dict_cfg:
+                print("* tag_topics:" + str(dict_cfg["tag_topics"]))
+            if "anchor_topics" in dict_cfg:
+                print("* anchor_topics:" + str(dict_cfg["anchor_topics"]))
+            if "abs_anchor_positions" in dict_cfg:
+                print("* abs_anchor_positions:" + str(dict_cfg["abs_anchor_positions"]))
             print("* pose_topics:" + str(pose_topics))
 
         info_dict = yaml.load(bag._get_yaml_info(), Loader=yaml.FullLoader)
@@ -159,21 +159,23 @@ class ROSbag_TrueRanges:
             if not found:
                 print("# WARNING: desired topic [" + str(topic_pose) + "] is not in bag file!")
 
-        for key, val in dict_cfg["tag_topics"].items():
-            found = False
-            for topic_info in bag_topics:
-                if topic_info['topic'] == val:
-                    found = True
-            if not found:
-                print("# WARNING: desired topic [" + str(val) + "] is not in bag file!")
-        for key, val in dict_cfg["anchor_topics"].items():
-            found = False
-            if val != "":
+        if "tag_topics" in dict_cfg:
+            for key, val in dict_cfg["tag_topics"].items():
+                found = False
                 for topic_info in bag_topics:
                     if topic_info['topic'] == val:
                         found = True
                 if not found:
                     print("# WARNING: desired topic [" + str(val) + "] is not in bag file!")
+        if "anchor_topics" in dict_cfg:
+            for key, val in dict_cfg["anchor_topics"].items():
+                found = False
+                if val != "":
+                    for topic_info in bag_topics:
+                        if topic_info['topic'] == val:
+                            found = True
+                    if not found:
+                        print("# WARNING: desired topic [" + str(val) + "] is not in bag file!")
 
         if verbose:
             print("\nROSbag_TrueRanges: num messages " + str(num_messages))
@@ -213,7 +215,7 @@ class ROSbag_TrueRanges:
             print("ROSbag_TrueRanges: computing new range measurements...")
             with rosbag.Bag(bagfile_out_name, 'w') as outbag:
                 for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
-                    if topic in dict_cfg["tag_topics"].values():
+                    if "tag_topics" in dict_cfg and topic in dict_cfg["tag_topics"].values():
                         TAG_ID1 = get_key_from_value(dict_cfg["tag_topics"], topic)
                         text = str("topic: " + str(topic) + " has wrong expected tag id! expected=" + str(
                             TAG_ID1) + " got=" + str(msg.UWB_ID1))
@@ -238,7 +240,7 @@ class ROSbag_TrueRanges:
                         T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
 
                         # T2A
-                        if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
+                        if "abs_anchor_positions" in dict_cfg and msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
                             t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
                             t_TA = T_GLOBAL_TAG1.t - t_GA2
                             d_TA = LA.norm(t_TA)
@@ -263,7 +265,7 @@ class ROSbag_TrueRanges:
                                 T_GLOBAL_BODY2 = ROSBag_Pose.get_pose(hist_poses2, timestamp)
                                 if T_GLOBAL_BODY2 is None:
                                     if verbose:
-                                        print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                        print("* skip measurement from topic=" + topic + " at t=" + str(timestamp))
                                     continue
                                 T_GLOBAL_TAG2 = T_GLOBAL_BODY2 * T_BODY_TAG2
 
@@ -281,7 +283,7 @@ class ROSbag_TrueRanges:
                         else:
                             outbag.write(topic, msg, t)
                         pass
-                    elif topic in dict_cfg["anchor_topics"].values():
+                    elif "anchor_topics" in dict_cfg and topic in dict_cfg["anchor_topics"].values():
 
                         ANCHOR_ID1 = get_key_from_value(dict_cfg["anchor_topics"], topic)
                         text = str("topic: " + str(topic) + " has wrong expected anchor id! expected=" + str(
@@ -301,7 +303,7 @@ class ROSbag_TrueRanges:
                             cnt_A2A += 1
                             pass
                         # A2T
-                        elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
+                        elif "tag_topics" in dict_cfg and msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
                             TAG_ID1 = msg.UWB_ID2
                             t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
                             T_BODY_TAG1 = SE3()
@@ -311,7 +313,7 @@ class ROSbag_TrueRanges:
                             T_GLOBAL_BODY = ROSBag_Pose.get_pose(hist_poses, timestamp)
                             if T_GLOBAL_BODY is None:
                                 if verbose:
-                                    print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                    print("* skip measurement from topic=" + topic + " at t=" + str(timestamp))
                                 continue
 
                             T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
