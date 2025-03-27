@@ -254,7 +254,8 @@ class ROSbag_TrueRanges:
                         elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
                             TAG_ID2 = msg.UWB_ID2
                             t_bt2 = dict_cfg["rel_tag_positions"][TAG_ID2]
-                            T_BODY_TAG2 = SE3(np.array(t_bt2))
+                            T_BODY_TAG2 = SE3()
+                            T_BODY_TAG2.t = (np.array(t_bt2))
 
                             if pose_topics[TAG_ID1] == pose_topics[TAG_ID2]:
                                 # tag2 on the same rigid body
@@ -269,7 +270,8 @@ class ROSbag_TrueRanges:
                                     continue
                                 T_GLOBAL_TAG2 = T_GLOBAL_BODY2 * T_BODY_TAG2
 
-                            d_T1_T2 = LA.norm(T_GLOBAL_TAG1 - T_GLOBAL_TAG2)
+                            t_TT = T_GLOBAL_TAG1.t - T_GLOBAL_TAG2.t
+                            d_T1_T2 = LA.norm(t_TT)
                             msg.range_raw = bias_range * d_T1_T2 + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
                             msg.range_corr = d_T1_T2
                             msg.R = stddev_range * stddev_range
@@ -295,9 +297,9 @@ class ROSbag_TrueRanges:
                         # A2A
                         if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
                             t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
-                            d_TA = LA.norm(t_GA1 - t_GA2)
-                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
-                            msg.range_corr = d_TA
+                            d_AA = LA.norm(t_GA1 - t_GA2)
+                            msg.range_raw = bias_range * d_AA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
+                            msg.range_corr = d_AA
                             msg.R = stddev_range * stddev_range
                             idx += 1
                             cnt_A2A += 1
@@ -318,9 +320,9 @@ class ROSbag_TrueRanges:
 
                             T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
                             t_TA = T_GLOBAL_TAG1.t - t_GA1
-                            d_TA = LA.norm(t_TA)
-                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
-                            msg.range_corr = d_TA
+                            d_AT = LA.norm(t_TA)
+                            msg.range_raw = bias_range * d_AT + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
+                            msg.range_corr = d_AT
                             msg.R = stddev_range * stddev_range
                             idx += 1
                             cnt_A2T += 1
