@@ -42,7 +42,6 @@ class ROSbag_TrueRanges:
     @staticmethod
     def extract(bagfile_in_name,
                 bagfile_out_name,
-                topic_pose,
                 cfg,
                 stddev_range=0.1,
                 bias_offset=0,  # gamma
@@ -65,7 +64,6 @@ class ROSbag_TrueRanges:
             print("ROSbag_TrueRanges:")
             print("* bagfile in name: " + str(bagfile_in_name))
             print("* bagfile out name: " + str(bagfile_out_name))
-            print("* topic: \t " + str(topic_pose))
             print("* cfg YAML file: \t " + str(cfg))
             print("* std_range: " + str(stddev_range))
             print("* bias_offset: " + str(bias_offset))
@@ -94,7 +92,8 @@ class ROSbag_TrueRanges:
             print("* result_dir: \t " + str(head))
 
 
-
+        pose_topics = dict()
+        tag_ids = []
         dict_cfg = None
         with open(cfg, "r") as yamlfile:
             dict_cfg = yaml.load(yamlfile, Loader=yaml.FullLoader)
@@ -105,12 +104,24 @@ class ROSbag_TrueRanges:
             if "tag_topics" not in dict_cfg:
                 print("[tag_topics] does not exist in fn=" + cfg)
                 return False
+            else:
+                for key, val in dict_cfg["tag_topics"].items():
+                    tag_ids.append(int(key))
             if "anchor_topics" not in dict_cfg:
                 print("[anchor_topics] does not exist in fn=" + cfg)
                 return False
             if "abs_anchor_positions" not in dict_cfg:
                 print("[abs_anchor_positions] does not exist in fn=" + cfg)
                 return False
+            # get the association between tag topics and the pose_topic(s)
+            if "pose_topic" not in dict_cfg and "pose_topics" not in dict_cfg:
+                print("[pose_topic] or [pose_topics] does not exist in fn=" + cfg)
+                return False
+            elif "pose_topic" in dict_cfg:
+                for key in tag_ids:
+                    pose_topics[key] = dict_cfg["pose_topic"]
+            elif "pose_topics" in dict_cfg:
+                pose_topics = dict_cfg["pose_topics"]
             print("Read successful")
 
         if verbose:
@@ -119,6 +130,7 @@ class ROSbag_TrueRanges:
             print("* tag_topics:" + str(dict_cfg["tag_topics"]))
             print("* anchor_topics:" + str(dict_cfg["anchor_topics"]))
             print("* abs_anchor_positions:" + str(dict_cfg["abs_anchor_positions"]))
+            print("* pose_topics:" + str(pose_topics))
 
         info_dict = yaml.load(bag._get_yaml_info(), Loader=yaml.FullLoader)
 
@@ -129,9 +141,10 @@ class ROSbag_TrueRanges:
             return False
 
         ## create csv file according to the topic names:
-        if topic_pose[0] != '/':
-            print("ROSbag_TrueRanges: Not a proper topic name: %s (should start with /)" % topic_pose)
-            return False
+        for key,topic_pose in pose_topics.items():
+            if topic_pose[0] != '/':
+                print("ROSbag_TrueRanges: Not a proper topic name: %s (should start with /)" % topic_pose)
+                return False
 
         ## check if desired pose topic is  in the bag file:
         num_messages = info_dict['messages']
@@ -139,11 +152,12 @@ class ROSbag_TrueRanges:
 
         ## check if desired topics are in the bag file:
         found = False
-        for topic_info in bag_topics:
-            if topic_info['topic'] == topic_pose:
-                found = True
-        if not found:
-            print("# WARNING: desired topic [" + str(topic_pose) + "] is not in bag file!")
+        for key, topic_pose in pose_topics.items():
+            for topic_info in bag_topics:
+                if topic_info['topic'] == topic_pose:
+                    found = True
+            if not found:
+                print("# WARNING: desired topic [" + str(topic_pose) + "] is not in bag file!")
 
         for key, val in dict_cfg["tag_topics"].items():
             found = False
@@ -165,7 +179,12 @@ class ROSbag_TrueRanges:
             print("\nROSbag_TrueRanges: num messages " + str(num_messages))
 
         round_decimals=6
-        hist_poses = ROSBag_Pose.extract_pose(bag, num_messages, topic_pose_body=topic_pose, round_decimals=round_decimals)
+        # for each unique topic_pose extract a history...
+        unique_pose_topics = set(pose_topics.values())
+        dict_hist_poses = dict()
+        for topic_pose in unique_pose_topics:
+            dict_hist_poses[topic_pose] = ROSBag_Pose.extract_pose(bag, num_messages, topic_pose_body=topic_pose,
+                                                                   round_decimals=round_decimals)
 
         noise_range_arr = np.random.normal(0, stddev_range, size=num_messages)  # 1000 samples with normal distribution
 
@@ -207,44 +226,10 @@ class ROSbag_TrueRanges:
                         T_GLOBAL_BODY = None
                         timestamp = round(msg.header.stamp.to_sec(), round_decimals)
                         interpol = False
-                        if hist_poses.exists_at_t(timestamp) is None:
-                            interpol = True
-                            # interpolate between poses
-                            [t1, T_GLOBAL_BODY_T1] = hist_poses.get_before_t(timestamp)
-                            [t2, T_GLOBAL_BODY_T2] = hist_poses.get_after_t(timestamp)
 
-                            if t1 is None or t2 is None:
-                                if verbose:
-                                    print("* NO POSE: skip measurement from topic=" + topic + " at t=" + str(timestamp))
-                                continue
+                        hist_poses = dict_hist_poses[pose_topics[TAG_ID1]]
 
-                            dt = t2 - t1
-                            dt_i = timestamp - t1
-                            i = dt_i / dt
-
-                            q0 = UnitQuaternion(T_GLOBAL_BODY_T1.R)
-                            q1 = UnitQuaternion(T_GLOBAL_BODY_T2.R)
-                            p0 = T_GLOBAL_BODY_T1.t
-                            p1 = T_GLOBAL_BODY_T2.t
-
-                            qr = UnitQuaternion(qslerp(q0.vec, q1.vec, i, shortest=True), norm=True)
-                            pr = p0 * (1 - i) + i * p1
-
-                            # interpolate between poses:
-                            T_GLOBAL_BODY = SE3.Rt(qr.R, pr, check=True)
-                            if not SE3.isvalid(T_GLOBAL_BODY, check=True):
-                                if T_GLOBAL_BODY.A is None:
-                                    if verbose:
-                                        print("* interp failed: skip measurement from topic=" + topic + " at t=" + str(
-                                            timestamp))
-                                    continue
-                                else:
-                                    q = UnitQuaternion(SO3(T_GLOBAL_BODY.R, check=False), norm=True).unit()
-                                    T_GLOBAL_BODY = SE3.Rt(q.R, T_GLOBAL_BODY.t, check=True)
-
-                        else:
-                            T_GLOBAL_BODY = hist_poses.get_at_t(timestamp)
-
+                        T_GLOBAL_BODY = ROSBag_Pose.get_pose(hist_poses, timestamp)
                         if T_GLOBAL_BODY is None:
                             if verbose:
                                 print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
@@ -268,7 +253,20 @@ class ROSbag_TrueRanges:
                             TAG_ID2 = msg.UWB_ID2
                             t_bt2 = dict_cfg["rel_tag_positions"][TAG_ID2]
                             T_BODY_TAG2 = SE3(np.array(t_bt2))
-                            T_GLOBAL_TAG2 = T_GLOBAL_BODY * T_BODY_TAG2
+
+                            if pose_topics[TAG_ID1] == pose_topics[TAG_ID2]:
+                                # tag2 on the same rigid body
+                                T_GLOBAL_TAG2 = T_GLOBAL_BODY * T_BODY_TAG2
+                            else:
+                                # tag2 on different rigid body
+                                hist_poses2 = dict_hist_poses[pose_topics[TAG_ID2]]
+                                T_GLOBAL_BODY2 = ROSBag_Pose.get_pose(hist_poses2, timestamp)
+                                if T_GLOBAL_BODY2 is None:
+                                    if verbose:
+                                        print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                    continue
+                                T_GLOBAL_TAG2 = T_GLOBAL_BODY2 * T_BODY_TAG2
+
                             d_T1_T2 = LA.norm(T_GLOBAL_TAG1 - T_GLOBAL_TAG2)
                             msg.range_raw = bias_range * d_T1_T2 + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
                             msg.range_corr = d_T1_T2
@@ -309,35 +307,12 @@ class ROSbag_TrueRanges:
                             T_BODY_TAG1 = SE3()
                             T_BODY_TAG1.t = (np.array(t_bt1))
                             timestamp = round(msg.header.stamp.to_sec(), round_decimals)
-                            if hist_poses.exists_at_t(timestamp) is None:
-                                # interpolate between poses
-                                [t1, T_GLOBAL_BODY_T1] = hist_poses.get_before_t(timestamp)
-                                [t2, T_GLOBAL_BODY_T2] = hist_poses.get_after_t(timestamp)
-
-                                if t1 is None or t2 is None:
-                                    if verbose:
-                                        print("* skip measurement from topic=" + topic + " at t=" + str(timestamp))
-                                    continue
-
-                                dt = t2 - t1
-                                dt_i = timestamp - t1
-                                i = abs(dt_i / dt)
-
-                                # interpolate between poses:
-                                T_GLOBAL_BODY = T_GLOBAL_BODY_T1.interp(T_GLOBAL_BODY_T2, i)
-                                if not SE3.isvalid(T_GLOBAL_BODY, check=True):
-                                    if T_GLOBAL_BODY.A is None:
-                                        if verbose:
-                                            print(
-                                                "* interp failed: skip measurement from topic=" + topic + " at t=" + str(
-                                                    timestamp))
-                                        continue
-                                    else:
-                                        q = UnitQuaternion(SO3(T_GLOBAL_BODY.R, check=False), norm=True).unit()
-                                        T_GLOBAL_BODY = SE3.Rt(q.R, T_GLOBAL_BODY.t, check=True)
-                                pass
-                            else:
-                                T_GLOBAL_BODY = hist_poses.get_at_t(timestamp)
+                            hist_poses = dict_hist_poses[pose_topics[TAG_ID1]]
+                            T_GLOBAL_BODY = ROSBag_Pose.get_pose(hist_poses, timestamp)
+                            if T_GLOBAL_BODY is None:
+                                if verbose:
+                                    print("* skip measurement from topic=" + topic + "at t=" + str(timestamp))
+                                continue
 
                             T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
                             t_TA = T_GLOBAL_TAG1.t - t_GA1
@@ -377,15 +352,14 @@ class ROSbag_TrueRanges:
 
 
 def main():
-    # example: ROSBag_Pose2Ranges.py --bagfile ../test/sample_data//uwb_calib_a01_2023-08-31-21-05-46.bag --topic /d01/mavros/vision_pose/pose --cfg ../test/sample_data/config.yaml --verbose
+    # example: ROSBag_Pose2Ranges.py --bagfile ../test/sample_data//uwb_calib_a01_2023-08-31-21-05-46.bag --cfg ../test/sample_data/config.yaml --verbose
     parser = argparse.ArgumentParser(
         description='ROSBag_TrueRanges: compute at given range topics the true ranges to N abs_anchor_positions and M '
                     'rel_tag_positions, which is stored into a CSV file')
     parser.add_argument('--bagfile_in', help='input bag file', required=True)
     parser.add_argument('--bagfile_out', help='output bag file', default="")
-    parser.add_argument('--topic_pose', help='desired topic', required=True)
     parser.add_argument('--cfg',
-                        help='YAML configuration file describing the setup: {rel_tag_positions, abs_anchor_positions}',
+                        help='YAML configuration file describing the setup: {rel_tag_positions, abs_anchor_positions, pose_topics}',
                         default="config.yaml", required=True)
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--std_range',
@@ -405,16 +379,11 @@ def main():
     tp_start = time.time()
     args = parser.parse_args()
 
-    if ROSbag_TrueRanges.extract(bagfile_in_name=args.bagfile_in,
-                                 bagfile_out_name=args.bagfile_out,
-                                 topic_pose=str(args.topic_pose),
-                                 cfg=args.cfg,
-                                 verbose=args.verbose, stddev_range=float(args.std_range),
-                                 bias_offset=float(args.bias_offset),
-                                 bias_range=float(args.bias_range),
-                                 perc_outliers=float(args.perc_outliers),
+    if ROSbag_TrueRanges.extract(bagfile_in_name=args.bagfile_in, bagfile_out_name=args.bagfile_out, cfg=args.cfg,
+                                 stddev_range=float(args.std_range), bias_offset=float(args.bias_offset),
+                                 bias_range=float(args.bias_range), perc_outliers=float(args.perc_outliers),
                                  stddev_outlier=float(args.outlier_stddev),
-                                 use_header_timestamp=args.use_header_timestamp):
+                                 use_header_timestamp=args.use_header_timestamp, verbose=args.verbose):
         print(" ")
         print("finished after [%s sec]\n" % str(time.time() - tp_start))
     else:

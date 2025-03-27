@@ -56,8 +56,8 @@ class RangeEvaluationTool:
             if "anchor_topics" not in dict_cfg:
                 print("[anchor_topics] does not exist in fn=" + cfg)
                 return False
-            if "pose_topic" not in dict_cfg:
-                print("[pose_topic] does not exist in fn=" + cfg)
+            if "pose_topic" not in dict_cfg and "pose_topics" not in dict_cfg:
+                print("[pose_topic] or [pose_topics] does not exist in fn=" + cfg)
                 return False
             print("Read successful")
 
@@ -96,12 +96,8 @@ class RangeEvaluationTool:
 
         # 2) create a clean bag file
         if not os.path.isfile(bagfile_out):
-            res = ROSbag_TrueRanges.extract(bagfile_in_name=bagfile_in,
-                                            bagfile_out_name=bagfile_out,
-                                            topic_pose=dict_cfg["pose_topic"],
-                                            cfg=cfg,
-                                            verbose=verbose,
-                                            stddev_range=0.001)
+            res = ROSbag_TrueRanges.extract(bagfile_in_name=bagfile_in, bagfile_out_name=bagfile_out, cfg=cfg,
+                                            stddev_range=0.001, verbose=verbose)
 
         if not os.path.isfile(fn_gt_ranges):
             # 3) extract all measurements from the clean bagfile

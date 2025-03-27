@@ -1,7 +1,7 @@
 # cnspy_ranging_evaluation
 
 A Python package to evaluate the two-way-ranging measurements between UWB modules in order to assess the accuracy.
-The baseline (ground truth) ranges can be computed from a recorded 3D trajectory of the moving ranging devices (tags) and known positions of stationary devices (anchors). 
+The baseline (ground truth) ranges can be computed from a recorded 3D trajectory of the moving ranging devices (tags) and known positions of stationary devices (anchors). Measurements from T2A, A2T, T2T, and A2A (A: Anchor, T: Tag) are computed. T2T can originate from two tags attached on a single or two rigid bodies.
 
 The following evaluations can be conducted:
 
@@ -59,7 +59,12 @@ YAML configuration file is in the form of:
 rel_tag_positions: {100: [-0.19, 0.105, -0.07], 105: [0.05, -0.105, -0.07]}
 tag_topics: {100: "/d01/tag1/ranging", 105: "/d01/tag2/ranging"}
 anchor_topics: {101: "/a01/ranging", 102: "/a02/ranging", 103: "/a03/ranging", 104: "/a04/ranging", 106: "/a06/ranging", 107: "/a07/ranging", 108: "/a08/ranging", 109: "/a09/ranging", 110: "/a10/ranging"}
-pose_topic: "/d01/mavros/vision_pose/pose"
+
+# pose of the moving tags:
+# if all tags on a single rigid body, you can use: pose_topic: "/d01/mavros/vision_pose/pose"
+# otherwise, if tags are on different moving rigid bodies:
+pose_topics: {100: "/d01/mavros/vision_pose/pose", 105: "/d01/mavros/vision_pose/pose"}
+
 # relative position of the stationary anchors
 abs_anchor_positions: {101: [-1.308, -4.140, 0.66], 102: [1.742,-4.147,1.881], 103: [2.914,2.081,2.172], 104: [0.18, -4.13, 3.242], 106: [-1.772, 0.943, 3.256], 107: [-2.021, 1.814, 1.732], 108: [-1.98, 0.069, 1.76], 109: [0.433, 4.105, 0.925], 110: [2.59, -0.2, 0.33]}
 ```
@@ -94,7 +99,7 @@ optional arguments:
 ### ROSBag_TrueRanges
 ```commandline
 cnspy_ranging_evaluation$ python ROSBag_TrueRanges.py -h
-usage: ROSBag_TrueRanges.py [-h] --bagfile_in BAGFILE_IN [--bagfile_out BAGFILE_OUT] --topic_pose TOPIC_POSE --cfg CFG [--verbose] [--std_range STD_RANGE] [--bias_offset BIAS_OFFSET] [--bias_range BIAS_RANGE] [--perc_outliers PERC_OUTLIERS] [--outlier_stddev OUTLIER_STDDEV] [--use_header_timestamp]
+usage: ROSBag_TrueRanges.py [-h] --bagfile_in BAGFILE_IN [--bagfile_out BAGFILE_OUT] --cfg CFG [--verbose] [--std_range STD_RANGE] [--bias_offset BIAS_OFFSET] [--bias_range BIAS_RANGE] [--perc_outliers PERC_OUTLIERS] [--outlier_stddev OUTLIER_STDDEV] [--use_header_timestamp]
 
 ROSBag_TrueRanges: extract a given pose topic and compute ranges to N abs_anchor_positions and M rel_tag_positions, which is stored into a CSV file
 
@@ -104,9 +109,7 @@ optional arguments:
                         input bag file
   --bagfile_out BAGFILE_OUT
                         output bag file
-  --topic_pose TOPIC_POSE
-                        desired topic
-  --cfg CFG             YAML configuration file describing the setup: {rel_tag_positions, abs_anchor_positions}
+  --cfg CFG             YAML configuration file describing the setup: {rel_tag_positions, abs_anchor_positions, pose_topics}
   --verbose
   --std_range STD_RANGE
                         standard deviation of generated measurements: z = d + white_noise(std_range)
@@ -129,6 +132,8 @@ YAML configuration file is in the form of:
 rel_tag_positions: {0:[-0.09, 0.04, -0.045]}
 # relative position of the stationary anchors
 abs_anchor_positions: {1:[-1.306, -4.146, 0.662], 2:[1.748,-4.173,1.878], 3:[2.928,2.47,2.153]}
+# pose of the moving tags
+pose_topics: {0: "/d01/mavros/vision_pose/pose"}
 
 ```
 
@@ -275,6 +280,8 @@ YAML configuration file is in the form of:
 rel_tag_positions: {0:[-0.09, 0.04, -0.045]}
 # relative position of the stationary anchors
 abs_anchor_positions: {1:[-1.306, -4.146, 0.662], 2:[1.748,-4.173,1.878], 3:[2.928,2.47,2.153]}
+# pose of the moving tags
+pose_topics: {0: "/d01/mavros/vision_pose/pose"}
 
 ```
 ### PlotTwoWayRanges

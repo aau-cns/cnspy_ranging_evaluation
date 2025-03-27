@@ -29,6 +29,7 @@ class RangeEvaluationTrail:
 
     @staticmethod
     def test_eval():
+        reprocess = True
         sequence = 'T1_A3_loiter_2m_2023-08-31-20-58-20'
         bagfile_in = str(SAMPLE_DATA_DIR + '/' + sequence + '.bag')
         cfg_file = str(SAMPLE_DATA_DIR + '/config.yaml')
@@ -38,7 +39,7 @@ class RangeEvaluationTrail:
 
 
         # 1) extract all measurements to CSV
-        if not os.path.isfile(fn_meas_ranges):
+        if not os.path.isfile(fn_meas_ranges) or reprocess:
             res = TWR_ROSbag2CSV.extract_to_one(bagfile_name=bagfile_in,
                                                     topic_list=topic_list,
                                                     fn=fn_meas_ranges,
@@ -50,15 +51,11 @@ class RangeEvaluationTrail:
         bagfile_out = str(RES_DATA_DIR + '/' + sequence + '-true-ranges.bag')
 
         # 2) create a clean bag file
-        if not os.path.isfile(bagfile_out):
-            res = ROSbag_TrueRanges.extract(bagfile_in_name=bagfile_in,
-                                            bagfile_out_name=bagfile_out,
-                                            topic_pose='/d01/mavros/vision_pose/pose',
-                                            cfg=cfg_file,
-                                            verbose=True,
-                                            stddev_range=0.001)
+        if not os.path.isfile(bagfile_out) or reprocess:
+            res = ROSbag_TrueRanges.extract(bagfile_in_name=bagfile_in, bagfile_out_name=bagfile_out, cfg=cfg_file,
+                                            stddev_range=0.001, verbose=True)
 
-        if not os.path.isfile(fn_gt_ranges):
+        if not os.path.isfile(fn_gt_ranges) or reprocess:
             # 3) extract all measurements from the clean bagfile
             res = TWR_ROSbag2CSV.extract_to_one(bagfile_name=bagfile_out,
                                                     topic_list=topic_list,
@@ -102,6 +99,7 @@ class RangeEvaluationTrail:
 
     @staticmethod
     def test_range_gen_outliers():
+        reprocess=True
         sequence = 'T1_A3_loiter_2m_2023-08-31-20-58-20'
         bagfile_in = str(SAMPLE_DATA_DIR + '/' + sequence + '.bag')
         cfg_file = str(SAMPLE_DATA_DIR + '/config.yaml')
@@ -113,17 +111,12 @@ class RangeEvaluationTrail:
         bagfile_out_noisy = str(RES_DATA_DIR + '/' + sequence + '-true-ranges-stddev0-outliers0_1.bag')
 
         # 1) create a dirty bag file
-        if not os.path.isfile(bagfile_out_noisy):
-            res = ROSbag_TrueRanges.extract(bagfile_in_name=bagfile_in,
-                                            bagfile_out_name=bagfile_out_noisy,
-                                            topic_pose='/d01/mavros/vision_pose/pose',
-                                            cfg=cfg_file,
-                                            verbose=True,
-                                            stddev_range=0.001,
-                                            perc_outliers=0.1,
-                                            stddev_outlier=1.0)
+        if not os.path.isfile(bagfile_out_noisy) or reprocess:
+            res = ROSbag_TrueRanges.extract(bagfile_in_name=bagfile_in, bagfile_out_name=bagfile_out_noisy,
+                                            cfg=cfg_file, stddev_range=0.001, perc_outliers=0.1, stddev_outlier=1.0,
+                                            verbose=True)
 
-        if not os.path.isfile(fn_meas_ranges):
+        if not os.path.isfile(fn_meas_ranges) or reprocess:
             # 2) extract all measurements from the dirty bagfile
             res = TWR_ROSbag2CSV.extract_to_one(bagfile_name=bagfile_out_noisy,
                                                     topic_list=topic_list,
@@ -134,15 +127,11 @@ class RangeEvaluationTrail:
         bagfile_out = str(RES_DATA_DIR + '/' + sequence + '-true-ranges.bag')
 
         # 3) create a clean bag file
-        if not os.path.isfile(bagfile_out):
-            res = ROSbag_TrueRanges.extract(bagfile_in_name=bagfile_in,
-                                            bagfile_out_name=bagfile_out,
-                                            topic_pose='/d01/mavros/vision_pose/pose',
-                                            cfg=cfg_file,
-                                            verbose=True,
-                                            stddev_range=0.001)
+        if not os.path.isfile(bagfile_out) or reprocess:
+            res = ROSbag_TrueRanges.extract(bagfile_in_name=bagfile_in, bagfile_out_name=bagfile_out, cfg=cfg_file,
+                                            stddev_range=0.001, verbose=True)
 
-        if not os.path.isfile(fn_gt_ranges):
+        if not os.path.isfile(fn_gt_ranges) or reprocess:
             # 4) extract all measurements from the clean bagfile
             res = TWR_ROSbag2CSV.extract_to_one(bagfile_name=bagfile_out,
                                                     topic_list=topic_list,
@@ -184,4 +173,6 @@ class RangeEvaluationTrail:
 
 
 if __name__ == "__main__":
-     RangeEvaluationTrail.test_range_gen_outliers()
+    RangeEvaluationTrail.test_eval()
+    #RangeEvaluationTrail.test_range_gen_outliers()
+    pass
