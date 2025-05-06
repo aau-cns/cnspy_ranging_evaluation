@@ -216,12 +216,17 @@ class ROSbag_TrueRanges:
             with rosbag.Bag(bagfile_out_name, 'w') as outbag:
                 for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
                     if "tag_topics" in dict_cfg and topic in dict_cfg["tag_topics"].values():
-                        TAG_ID1 = get_key_from_value(dict_cfg["tag_topics"], topic)
-                        text = str("topic: " + str(topic) + " has wrong expected tag id! expected=" + str(
-                            TAG_ID1) + " got=" + str(msg.UWB_ID1))
-                        assert (int(TAG_ID1) == int(msg.UWB_ID1)), text
+                        msg_range_raw=0
+                        msg_range_corr=0
+                        msg_R=0
 
-                        t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
+                        msg_id1, msg_id2 = ROSbag_TrueRanges.get_msg_ids(msg)
+
+                        if (int(msg_id1) not in dict_cfg["tag_topics"].keys()):
+                            #text = str("topic: " + str(topic) + " has wrong expected tag id! expected=" + str( TAG_ID1) + " got=" + str(msg_id1))
+                            continue
+
+                        t_bt1 = dict_cfg["rel_tag_positions"][msg_id1]
                         T_BODY_TAG1 = SE3()
                         T_BODY_TAG1.t = (np.array(t_bt1))
 
@@ -229,7 +234,7 @@ class ROSbag_TrueRanges:
                         timestamp = round(msg.header.stamp.to_sec(), round_decimals)
                         interpol = False
 
-                        hist_poses = dict_hist_poses[pose_topics[TAG_ID1]]
+                        hist_poses = dict_hist_poses[pose_topics[msg_id1]]
 
                         T_GLOBAL_BODY = ROSBag_Pose.get_pose(hist_poses, timestamp)
                         if T_GLOBAL_BODY is None:
@@ -240,29 +245,28 @@ class ROSbag_TrueRanges:
                         T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
 
                         # T2A
-                        if "abs_anchor_positions" in dict_cfg and msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
-                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
+                        if "abs_anchor_positions" in dict_cfg and msg_id2 in dict_cfg["abs_anchor_positions"].keys():
+                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg_id2])
                             t_TA = T_GLOBAL_TAG1.t - t_GA2
                             d_TA = LA.norm(t_TA)
-                            msg.range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
-                            msg.range_corr = d_TA
-                            msg.R = stddev_range * stddev_range
+                            msg_range_raw = bias_range * d_TA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
+                            msg_range_corr = d_TA
+                            msg_R = stddev_range * stddev_range
                             idx += 1
                             cnt_T2A += 1
                             pass
                         # T2T
-                        elif msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
-                            TAG_ID2 = msg.UWB_ID2
-                            t_bt2 = dict_cfg["rel_tag_positions"][TAG_ID2]
+                        elif msg_id2 in dict_cfg["tag_topics"].keys():
+                            t_bt2 = dict_cfg["rel_tag_positions"][msg_id2]
                             T_BODY_TAG2 = SE3()
                             T_BODY_TAG2.t = (np.array(t_bt2))
 
-                            if pose_topics[TAG_ID1] == pose_topics[TAG_ID2]:
+                            if pose_topics[msg_id1] == pose_topics[msg_id2]:
                                 # tag2 on the same rigid body
                                 T_GLOBAL_TAG2 = T_GLOBAL_BODY * T_BODY_TAG2
                             else:
                                 # tag2 on different rigid body
-                                hist_poses2 = dict_hist_poses[pose_topics[TAG_ID2]]
+                                hist_poses2 = dict_hist_poses[pose_topics[msg_id2]]
                                 T_GLOBAL_BODY2 = ROSBag_Pose.get_pose(hist_poses2, timestamp)
                                 if T_GLOBAL_BODY2 is None:
                                     if verbose:
@@ -272,46 +276,49 @@ class ROSbag_TrueRanges:
 
                             t_TT = T_GLOBAL_TAG1.t - T_GLOBAL_TAG2.t
                             d_T1_T2 = LA.norm(t_TT)
-                            msg.range_raw = bias_range * d_T1_T2 + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
-                            msg.range_corr = d_T1_T2
-                            msg.R = stddev_range * stddev_range
+                            msg_range_raw = bias_range * d_T1_T2 + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
+                            msg_range_corr = d_T1_T2
+                            msg_R = stddev_range * stddev_range
                             idx += 1
                             cnt_T2T += 1
                             pass
 
-                        # write tag topic
+                        msg = ROSbag_TrueRanges.replace_measurements(msg, msg_R, msg_range_corr, msg_range_raw)
                         if use_header_timestamp and hasattr(msg, "header"):
                             outbag.write(topic, msg, msg.header.stamp)
                         else:
                             outbag.write(topic, msg, t)
                         pass
                     elif "anchor_topics" in dict_cfg and topic in dict_cfg["anchor_topics"].values():
+                        msg_range_raw=0
+                        msg_range_corr=0
+                        msg_R=0
 
-                        ANCHOR_ID1 = get_key_from_value(dict_cfg["anchor_topics"], topic)
-                        text = str("topic: " + str(topic) + " has wrong expected anchor id! expected=" + str(
-                            ANCHOR_ID1) + " got=" + str(msg.UWB_ID1))
-                        assert (int(ANCHOR_ID1) == int(msg.UWB_ID1)), text
+                        msg_id1, msg_id2 = ROSbag_TrueRanges.get_msg_ids(msg, msg_id1, msg_id2)
 
-                        t_GA1 = np.array(dict_cfg["abs_anchor_positions"][ANCHOR_ID1])
+                        if (int(msg_id1) not in dict_cfg["anchor_topics"].keys()):
+                            #text = str("topic: " + str(topic) + " has wrong expected anchor id! expected=" + str(ANCHOR_ID1) + " got=" + str(msg_id1))
+                            continue
+
+                        t_GA1 = np.array(dict_cfg["abs_anchor_positions"][msg_id1])
 
                         # A2A
-                        if msg.UWB_ID2 in dict_cfg["abs_anchor_positions"].keys():
-                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg.UWB_ID2])
+                        if msg_id2 in dict_cfg["abs_anchor_positions"].keys():
+                            t_GA2 = np.array(dict_cfg["abs_anchor_positions"][msg_id2])
                             d_AA = LA.norm(t_GA1 - t_GA2)
-                            msg.range_raw = bias_range * d_AA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
-                            msg.range_corr = d_AA
-                            msg.R = stddev_range * stddev_range
+                            msg_range_raw = bias_range * d_AA + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
+                            msg_range_corr = d_AA
+                            msg_R = stddev_range * stddev_range
                             idx += 1
                             cnt_A2A += 1
                             pass
                         # A2T
-                        elif "tag_topics" in dict_cfg and msg.UWB_ID2 in dict_cfg["tag_topics"].keys():
-                            TAG_ID1 = msg.UWB_ID2
-                            t_bt1 = dict_cfg["rel_tag_positions"][TAG_ID1]
+                        elif "tag_topics" in dict_cfg and msg_id2 in dict_cfg["tag_topics"].keys():
+                            t_bt1 = dict_cfg["rel_tag_positions"][msg_id2]
                             T_BODY_TAG1 = SE3()
                             T_BODY_TAG1.t = (np.array(t_bt1))
                             timestamp = round(msg.header.stamp.to_sec(), round_decimals)
-                            hist_poses = dict_hist_poses[pose_topics[TAG_ID1]]
+                            hist_poses = dict_hist_poses[pose_topics[msg_id2]]
                             T_GLOBAL_BODY = ROSBag_Pose.get_pose(hist_poses, timestamp)
                             if T_GLOBAL_BODY is None:
                                 if verbose:
@@ -321,12 +328,14 @@ class ROSbag_TrueRanges:
                             T_GLOBAL_TAG1 = T_GLOBAL_BODY * T_BODY_TAG1
                             t_TA = T_GLOBAL_TAG1.t - t_GA1
                             d_AT = LA.norm(t_TA)
-                            msg.range_raw = bias_range * d_AT + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
-                            msg.range_corr = d_AT
-                            msg.R = stddev_range * stddev_range
+                            msg_range_raw = bias_range * d_AT + bias_offset + noise_range_arr[idx] + outlier_offset_arr[idx]
+                            msg_range_corr = d_AT
+                            msg_R = stddev_range * stddev_range
                             idx += 1
                             cnt_A2T += 1
                             pass
+
+                        msg = ROSbag_TrueRanges.replace_measurements(msg, msg_R, msg_range_corr, msg_range_raw)
                         # write anchor topic
                         if use_header_timestamp and hasattr(msg, "header"):
                             outbag.write(topic, msg, msg.header.stamp)
@@ -353,6 +362,35 @@ class ROSbag_TrueRanges:
             print("* num. A2T = " + str(cnt_A2T))
         bag.close()
         return True
+
+    @staticmethod
+    def replace_measurements(msg, msg_R, msg_range_corr, msg_range_raw):
+        # REPLACE VALUES
+        # https://github.com/aau-cns/uwb_msgs
+        if hasattr(msg, 'header') and hasattr(msg, 'range_raw'):
+            msg.range_raw = msg_range_raw
+            msg.range_corr = msg_range_corr
+            msg.R = msg_R
+        #  https://github.com/decargroup/miluv/blob/main/uwb_ros/msg/RangeStamped.msg
+        elif hasattr(msg, 'header') and hasattr(msg, 'range') and hasattr(msg, 'from_id'):
+            msg.range = msg_range_raw
+            msg.covariance = msg_R
+        return msg
+
+    @staticmethod
+    def get_msg_ids(msg):
+        # https://github.com/aau-cns/uwb_msgs/blob/main/msg/TwoWayRangeStamped.msg
+        if hasattr(msg, 'header') and hasattr(msg, 'range_raw'):
+            msg_id1 = msg.UWB_ID1
+            msg_id2 = msg.UWB_ID2
+
+        #  https://github.com/decargroup/miluv/blob/main/uwb_ros/msg/RangeStamped.msg
+        elif hasattr(msg, 'header') and hasattr(msg, 'range') and hasattr(msg, 'from_id'):
+            msg_id1 = msg.from_id
+            msg_id2 = msg.to_id
+        else:
+            assert False, "ROSbag_TrueRanges: Unsupported ROS message format"
+        return msg_id1, msg_id2
 
 
 def main():

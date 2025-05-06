@@ -40,7 +40,6 @@ pip3 install cnspy_ranging_evaluation
 * TWR_ROSbag2CSV 
 * PlotTwoWayRanges
 
-
 ## Usage
 
 This package contains different tools to evaluate the Two-Way-Ranging (TWR) measurements between pairs  <ID1, ID2> of devices. 
@@ -53,14 +52,22 @@ This package contains different tools to evaluate the Two-Way-Ranging (TWR) meas
 
 ### YAML configuration file
 
+**Two UWB ROS1 message formats are currently supported: [uwb_msgs::TwoWayRangeStamped](https://github.com/aau-cns/uwb_msgs/blob/main/msg/TwoWayRangeStamped.msg) and [uwb_ros::RangeStamped](https://github.com/decargroup/miluv/blob/main/uwb_ros/msg/RangeStamped.msg)**
+
+**Four ROS1 message formats for the true pose are supported: [nav_msgs::Odometry](https://docs.ros2.org/foxy/api/nav_msgs/msg/Odometry.html), [geometry_msgs::PoseStamped](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/PoseStamped.html), [geometry_msgs::PoseWithCovarianceStamped](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html), and [geometry_msgs::TransformStamped](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/TransformStamped.html).**
+
+
 YAML configuration file is in the form of:
 ```yaml
 # relative position of the moving tags
 rel_tag_positions: {100: [-0.19, 0.105, -0.07], 105: [0.05, -0.105, -0.07]}
+
+# topic formats: uwb_msgs::TwoWayRangeStamped or uwb_ros::RangeStamped
 tag_topics: {100: "/d01/tag1/ranging", 105: "/d01/tag2/ranging"}
 anchor_topics: {101: "/a01/ranging", 102: "/a02/ranging", 103: "/a03/ranging", 104: "/a04/ranging", 106: "/a06/ranging", 107: "/a07/ranging", 108: "/a08/ranging", 109: "/a09/ranging", 110: "/a10/ranging"}
 
-# pose of the moving tags:
+# pose of the moving tags: 
+# supported formats: nav_msgs::Odometry, geometry_msgs::PoseStamped, geometry_msgs::PoseWithCovarianceStamped, and geometry_msgs::Transform.
 # if all tags on a single rigid body, you can use: pose_topic: "/d01/mavros/vision_pose/pose"
 # otherwise, if tags are on different moving rigid bodies:
 pose_topics: {100: "/d01/mavros/vision_pose/pose", 105: "/d01/mavros/vision_pose/pose"}

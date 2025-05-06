@@ -268,12 +268,19 @@ class TWR_ROSbag2CSV:
         ## extract the desired topics from the BAG file
         for topic, msg, t in tqdm(bag.read_messages(), total=num_messages, unit="msgs"):
             if topic in topic_list:
-                if hasattr(msg, 'header') and hasattr(msg, 'range_raw'):  # STAMPED
+                # https://github.com/aau-cns/uwb_msgs/blob/main/msg/TwoWayRangeStamped.msg
+                if hasattr(msg, 'header') and hasattr(msg, 'range_raw'):  # TwoWayRangeStamped
                     # HINT: conversions:
                     content = ["%f" % msg.header.stamp.to_sec(), str(msg.range_raw), str(msg.range_corr), str(msg.R), str(msg.UWB_ID1), str(msg.UWB_ID2), str(msg.type_ID1), str(msg.type_ID2), str(msg.LOS)]
-
                     file_writer.writerow(content)
 
+                #  https://github.com/decargroup/miluv/blob/main/uwb_ros/msg/RangeStamped.msg
+                elif hasattr(msg, 'header') and hasattr(msg, 'range') and hasattr(msg, 'from_id'):  # RangeStamped
+                    # HINT: conversions:
+                    content = ["%f" % msg.header.stamp.to_sec(), str(msg.range), "0", str(msg.covariance), str(msg.from_id), str(msg.to_id), "U", "U", "1"]
+                    file_writer.writerow(content)
+                else:
+                    assert False, "ROSbag_TrueRanges: Unsupported ROS message format"
         ## CLEANUP:
         csvfile.close()
 
